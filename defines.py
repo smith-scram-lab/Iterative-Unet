@@ -7,6 +7,9 @@ PARAM_PATH_SCORES = './prev-analysis'
 PARAM_PATH_TEMP_POLAR = './temp/polar_Dom'
 PARAM_PATH_TEMP_CARTE = './temp/cartesian_Dom'
 
+PARAM_BETA1 = [0.2, 0.4, 0.6, 0.4]
+PARAM_BETA2 = [0.8, 0.4, 0.8, 0.999]
+
 PARAM_SUB_FOLDER_POLAR = 'polar'
 PARAM_SUB_FOLDER_CARTE = 'cartesian'
 PARAM_IMG_FOLDER = 'image'
