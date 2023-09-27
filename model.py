@@ -70,7 +70,7 @@ def unet(beta1, beta2, pretrained_weights = None, input_size = (256,256,3)):
 
     model = Model(inputer, conv10)
 
-    model.compile(optimizer = Adam(learning_rate = 1e-4, beta_1 = beta1, beta_2 = beta2), loss = dice_coef_loss, metrics = ['accuracy', dice_coef_loss])
+    model.compile(optimizer = Adam(learning_rate = 1e-5, beta_1 = beta1, beta_2 = beta2), loss = dice_coef_loss, metrics = ['accuracy', dice_coef_loss])
     # model.summary()
 
     if(pretrained_weights):
