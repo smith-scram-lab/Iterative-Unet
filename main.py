@@ -2,6 +2,7 @@ from defines import *
 from model import *
 from data import *
 from filePrep import *
+from migration_yz.migrator import *
 import sys
 
 import cv2
@@ -19,7 +20,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 import os
-import math
 import shutil
 
 def train(working_parent_folder, if_polar,data_gen_args):
@@ -54,7 +54,7 @@ def train(working_parent_folder, if_polar,data_gen_args):
         
     return(history)
     
-def dice_coefficient(image1, image2):
+def dice_coefficient(image1, image2):#Generate the Dice coefficient of two binary images, should do thresholding before inputting
     # Ensure the input images have the same shape
     smooth = 1
     if image1.shape != image2.shape:
@@ -84,45 +84,64 @@ def dice_coefficient(image1, image2):
     dice_avg = (dice + dice_f) / 2.0
     #print('dice_avg', dice_avg)
     return dice_avg
-    
+
+def make_K_folds(polar_indices,carte_indices,K):
+
+    checkNcreateTempFolder(PARAM_PATH_TEMP_POLAR, K)
+    checkNcreateTempFolder(PARAM_PATH_TEMP_CARTE, K)
+
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+
+    i = 0
+    for train_indices, test_indices in kfold.split(polar_indices):
+        fillFolder(test_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_POLAR, i)
+        i += 1
+    i = 0
+    for train_indices, test_indices in kfold.split(carte_indices):
+        fillFolder(test_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_CARTE, i)
+        i += 1
+
+
 if __name__ == '__main__':
-
-while True:
-	# step0: enable GPU version
-	# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # step0: enable GPU version
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # os.system("tree -d")
-    
+    is_first_round = True
+    while True:   
 	# step1: file relocation 
-	
-    #file_name = 'analysis_dice_back_Test_C.npy'
-    #file_name = 'analysis_dice_back_Test_P.npy'
-    #file_name = 'analysis_dice_back_Test_P2C.npy'
-    file_name = 'analysis_dice_back_Train_P.npy'
+        if is_first_round:
+            is_first_round = False
+            score_file_polar = 'analysis_dice_back_Train_P.npy'
+            score_file_carte = 'analysis_dice_back_Train_C.npy'
+            np_file_polar = os.path.join(PARAM_PATH_SCORES, score_file_polar)
+            np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)
+            img_score_polar = np.load(np_file_polar)
+            img_score_carte = np.load(np_file_carte)
+            migrating_wizard = migrator(img_score_polar,img_score_carte)
+            first_split = migrating_wizard.get_loc_history()
+            true_indices = np.where(first_split)[0]
+            false_indices = np.where(~first_split)[0]
+            print(true_indices.shape)
+            print(false_indices.shape)
+            make_K_folds(true_indices,false_indices,K = 5)
+        else:
+            pass
 
-    np_file = os.path.join(PARAM_PATH_SCORES, file_name)
-    
-    #load npy file
-    img_score = np.load(np_file)
+'''
+	# if 1st round:
+        #First round should have the two scorefiles input into the migrator, generate the first round of location matrix 
+        #sort scores in descending order and store index
+        #sorted only on cartesian score. tbc....
+        #fetch top polar dominant and non-polar dominant image
 
-    #sort scores in descending order and store index
-    sorted_score = np.flip(np.argsort(img_score))
-    sorted_score = pd.DataFrame(sorted_score)
+    # else:
+        # load scores from last round:
 
-    #fetch top polar dominant and non-polar dominant image
-    num_polar = round(len(sorted_score)/2)
-    num_cartesian = len(sorted_score) - num_polar
-    dfPolar = sorted_score.head(num_polar)
-    dfCartesian = sorted_score.tail(num_cartesian)
-    #print("Polar: \n", dfPolar)
-    #print("Cartesian: \n", dfCartesian)
-    
-    if mode == 0:
-    # K fold 
+        # relocate files
         K = 5
-
         checkNcreateTempFolder(PARAM_PATH_TEMP_POLAR, K)
         checkNcreateTempFolder(PARAM_PATH_TEMP_CARTE, K)
-        
+            
         kf = KFold(n_splits = K, shuffle = True, random_state = 42) 
         i = 0
         for train_index,test_index in kf.split(dfPolar):
@@ -133,9 +152,8 @@ while True:
         for train_index,test_index in kf.split(dfCartesian):
             fillFolder(test_index, dfCartesian, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_CARTE, i)
             i += 1
-        
-	    # setp2: training
-	    
+
+    #step 2: generate new training model
         data_gen_args_polar = dict(rotation_range = 50,      # TODO: improve the data augmentation
                         width_shift_range =0.2,
                         height_shift_range =0.2,
@@ -157,11 +175,10 @@ while True:
                         horizontal_flip = True,
                         fill_mode = 'nearest',
                         rescale = 1./255)
-
-
+        
         Cartesian_history = train(PARAM_PATH_TEMP_CARTE, False, data_gen_args_carte )
         
-        # Plot loss
+        # Generate Plot loss
         # for single_run in Polar_history:
         #     plt.plot(single_run.history['loss'])
         #     plt.plot(single_run.history['accuracy'])
@@ -177,36 +194,106 @@ while True:
         #     plt.xlabel('epoch')
         #     plt.legend(['loss', 'accuracy'], loc='upper left')
         #     plt.show()
-        
-    if mode == 1:
-        K = 5 #if we don't want to train again, run this
-        PARAM_BETA_TEST_NUM = 6
     
-    # Filematrix
-    n = len(image_files)
-    m = K * 2
-
-    filematrix = np.zeros((n,m))
-    for img_type in ['polar', 'carte']:
-        #
+        # Filematrix 7404*10 [0000000100]
+        n = len(image_files)  #7404
+        m = K * 2             #10
         img_extenstion = 'tif'
-        #
-        for_counter = 0
-        if img_type == 'polar':
-            working_parent_folder = PARAM_PATH_TEMP_POLAR
-        else:
-            working_parent_folder = PARAM_PATH_TEMP_CARTE
-            for_counter = 1
-        for i in range(K):
-            image_path = os.path.join(working_parent_folder, str(i), img_type, PARAM_IMG_FOLDER)
-            img_pattern = os.path.join(image_path, f'*.{image_extension}')
-            image_files = glob.glob(img_pattern)
-            for file_name in image_files:
-                file_name_shorten = os.path.basename(file_name)
-                file_name_raw, ext = os.path.splitext(file_name_shorten)
-                filematrix[int(file_name_raw),i + for_counter * K] = 1
-            #number_of_ones = np.count_nonzero(filematrix == 1)
-            #print(number_of_ones)  #uncomment this line when png file is not satisfactory, we can track the number of ones during each step  
-    plt.imsave('filematrix.png', filematrix, cmap = 'binary')   
+        filematrix = np.zeros((n,m))
+        for img_type in ['polar', 'carte']:
+
+            if_carte = 0
+            if img_type == 'polar':
+                working_parent_folder = PARAM_PATH_TEMP_POLAR
+            else:
+                working_parent_folder = PARAM_PATH_TEMP_CARTE
+                if_carte = 1
+            for i in range(K):
+                image_path = os.path.join(working_parent_folder, str(i), img_type, PARAM_IMG_FOLDER)
+                img_pattern = os.path.join(image_path, f'*.{image_extension}')
+                image_files = glob.glob(img_pattern)
+                for file_name in image_files:
+                    file_name_shorten = os.path.basename(file_name)
+                    file_name_raw, ext = os.path.splitext(file_name_shorten)
+                    filematrix[int(file_name_raw), i + if_carte * K] = 1
+                #number_of_ones = np.count_nonzero(filematrix == 1)
+                #print(number_of_ones)  #uncomment this line when png file is not satisfactory, we can track the number of ones during each step  
+        plt.imsave('filematrix.png', filematrix, cmap = 'binary')   
+
+        # Augmented Filematrix 7404*10 [1111100100]
+        augmented_filematrix = np.copy(filematrix)
+        for row in augmented_filematrix:
             
-	
+            for if_carte in range(2):
+                zero_count = 0
+                for index in range(K):
+                    real_index = index + if_carte * K
+                    if row[real_index] == 0:
+                        zero_count += 1
+                if zero_count == 5:
+                    row[if_carte*K:if_carte*K + 5] = 1
+        
+        row_indices, col_indices = np.where(augmented_filematrix == 1)
+        indices = list(zip(row_indices, col_indices))
+
+
+        # generate scorematrix with test results [000a0bcdef]
+        scorematrix = np.zeros((n,m))
+        for img_type in ['polar', 'carte']:
+            if_carte = 0
+
+            if img_type == 'polar':
+                working_parent_folder = PARAM_PATH_TEMP_POLAR
+                src_folder = PARAM_PATH_POLAR
+            else:
+                working_parent_folder = PARAM_PATH_TEMP_CARTE
+                src_folder = PARAM_PATH_CARTE
+                if_carte = 1
+                
+            for i in range(K):
+                current_folder_index = i + if_carte * K
+                temp_test_folder_name = 'temptest'
+                #print(working_parent_folder)
+                    
+                if os.path.exists(temp_test_folder_name):
+                    shutil.rmtree(temp_test_folder_name)
+                temp_test_img_folder = os.path.join(temp_test_folder_name,PARAM_IMG_FOLDER)
+                temp_test_msk_folder = os.path.join(temp_test_folder_name,PARAM_MSK_FOLDER)
+                os.makedirs(temp_test_img_folder)
+                os.makedirs(temp_test_msk_folder)
+            
+                for indice in indices:
+                    if indice[1] == current_folder_index:
+                        img_name = str(indice[0]) + '.' + img_extenstion
+                        src = os.path.join(src_folder,PARAM_IMG_FOLDER,img_name)
+                        shutil.copy2(src, temp_test_img_folder)
+                        src = os.path.join(src_folder,PARAM_MSK_FOLDER,img_name)
+                        shutil.copy2(src, temp_test_msk_folder)
+                
+                model_path = os.path.join(working_parent_folder, str(i), 'checkpoint.hdf5')
+                current_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
+                current_model.load_weights(model_path) 
+                for test_image_name in os.listdir(temp_test_img_folder):
+                    test_image_name_raw, ext = os.path.splitext(test_image_name)
+                    image_path = os.path.join(temp_test_img_folder, test_image_name)
+                    ground_truth_mask_path = os.path.join(temp_test_msk_folder, test_image_name)
+                    
+                    test_image = cv2.imread(image_path)
+                    test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
+                    test_image = test_image / 255.0
+                    test_image = np.expand_dims(test_image,axis = 0)
+
+                    ground_truth_mask = cv2.imread(ground_truth_mask_path, cv2.IMREAD_GRAYSCALE)
+                    ground_truth_mask = ground_truth_mask / 255.0
+                    ground_truth_mask = ground_truth_mask.astype(np.uint8)
+                    
+                    prediction = current_model.predict(test_image, verbose = 0)
+                    
+                    threshold = 0.5
+                    binary_mask = (prediction > threshold).astype(np.uint8)
+                    binary_mask = binary_mask[0,:,:,0]
+                    dice = dice_coefficient(ground_truth_mask, binary_mask)
+                    scorematrix[int(test_image_name_raw), current_folder_index] = dice
+                print('Done with folder ', current_folder_index)
+
+                #save scorematrix'''

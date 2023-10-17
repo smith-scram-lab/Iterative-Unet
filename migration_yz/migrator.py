@@ -3,18 +3,22 @@ import numpy as np
 class migrator:
 
     def get_loc_history(self):
-        print(self.history.sum())
-        print(self.history)
         return self.history
     
     
     def __init__(self, prev_p, prev_c):
-        self.filematrix = filematrix
-        n = filematrix.shape[0]
+        polar_minus_c_dif = prev_p - prev_c
+        n = polar_minus_c_dif.shape[0]
         self.history = np.zeros([n,1], dtype = np.bool)
-        for row_f, row_h in zip(self.filematrix, self.history):
-            if np.argmax(row_f) > 4:
-                row_h = [True]
+        threshold = np.median(polar_minus_c_dif)#take the median for even split
+        i = 0
+        for item in polar_minus_c_dif:#now the decision is based on the positivity of difference, which is based on the fact that about half and half split
+            if item > threshold:
+                self.history[i] = True #True is for Polar
+            else:
+                self.history[i] = False
+            i += 1
+            
                 
         
     def __str__(self):
