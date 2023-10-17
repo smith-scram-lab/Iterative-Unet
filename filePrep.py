@@ -16,11 +16,10 @@ def checkNcreateTempFolder(temp_folder_name, K):
         os.makedirs(os.path.join(temp_folder_name,str(i),CARTE,IMAGE))
         os.makedirs(os.path.join(temp_folder_name,str(i),CARTE,LABEL))
 
-def fillFolder(index, polar_src_folder, carte_src_folder, temp_folder_name, fold):
+def fillFolder(index, frame, polar_src_folder, carte_src_folder, temp_folder_name, fold):
     currentFolder = os.path.join(temp_folder_name, str(fold))
-    print(index.shape)
     for img in index:
-        img_name = str(img) + ".tif"
+        img_name = str(frame[img]) + ".tif"
         polarFolder = os.path.join(currentFolder, POLAR)
         carteFolder = os.path.join(currentFolder, CARTE)
         src = os.path.join(polar_src_folder, IMAGE, img_name)

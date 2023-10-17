@@ -85,28 +85,64 @@ def dice_coefficient(image1, image2):#Generate the Dice coefficient of two binar
     #print('dice_avg', dice_avg)
     return dice_avg
 
-def make_K_folds(polar_indices,carte_indices,K):
 
+
+def make_K_folds(polar_indices,carte_indices,K):
     checkNcreateTempFolder(PARAM_PATH_TEMP_POLAR, K)
     checkNcreateTempFolder(PARAM_PATH_TEMP_CARTE, K)
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=42)
 
     i = 0
-    for train_indices, test_indices in kfold.split(polar_indices):
-        fillFolder(test_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_POLAR, i)
+    for train_indices, test_indices_P in kfold.split(polar_indices):
+        fillFolder(test_indices_P, polar_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_POLAR, i)
+        print('Polar temp folder', i, 'created')
         i += 1
     i = 0
-    for train_indices, test_indices in kfold.split(carte_indices):
-        fillFolder(test_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_CARTE, i)
+    for train_indices, test_indices_C in kfold.split(carte_indices):
+        fillFolder(test_indices_C, carte_indices, PARAM_PATH_POLAR, PARAM_PATH_CARTE, PARAM_PATH_TEMP_CARTE, i)
+        print('Cartesian temp folder', i, 'created')
         i += 1
+    filematrixPNG_gen(K)
+
+######_________________________DEBUGGING TOOL______________
+def filematrixPNG_gen(K):
+    image_extension = 'tif'
+    img_pattern = os.path.join(PARAM_PATH_POLAR, PARAM_IMG_FOLDER, f'*.{image_extension}')
+    image_files = glob.glob(img_pattern)
+    n = len(image_files)
+    m = K * 2
+    filematrix = np.zeros((n,m))
+    for img_type in ['polar', 'carte']:
+        for_counter = 0
+        if img_type == 'polar':
+            working_parent_folder = PARAM_PATH_TEMP_POLAR
+        else:
+            working_parent_folder = PARAM_PATH_TEMP_CARTE
+            for_counter = 1
+        for i in range(K):
+            image_path = os.path.join(working_parent_folder, str(i), img_type, PARAM_IMG_FOLDER)
+            img_pattern = os.path.join(image_path, f'*.{image_extension}')
+            image_files = glob.glob(img_pattern)
+            for file_name in image_files:
+                file_name_shorten = os.path.basename(file_name)
+                file_name_raw, ext = os.path.splitext(file_name_shorten)
+                filematrix[int(file_name_raw),i + for_counter * K] = 1
+            #number_of_ones = np.count_nonzero(filematrix == 1)
+            #print(number_of_ones)  #uncomment this line when png file is not satisfactory, we can track the number of ones during each step  
+    plt.imsave('filematrix.png', filematrix, cmap = 'binary')
+    print('File Location saved as filematrix.png')
 
 
+
+######_________________________MAIN________________________
 if __name__ == '__main__':
     # step0: enable GPU version
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # os.system("tree -d")
     is_first_round = True
+    K = 5
+
     while True:   
 	# step1: file relocation 
         if is_first_round:
@@ -121,9 +157,8 @@ if __name__ == '__main__':
             first_split = migrating_wizard.get_loc_history()
             true_indices = np.where(first_split)[0]
             false_indices = np.where(~first_split)[0]
-            print(true_indices.shape)
-            print(false_indices.shape)
-            make_K_folds(true_indices,false_indices,K = 5)
+            make_K_folds(true_indices,false_indices,K)
+            
         else:
             pass
 
