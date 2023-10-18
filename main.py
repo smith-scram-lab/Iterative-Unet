@@ -53,7 +53,7 @@ def train(working_parent_folder,data_gen_args):
         test_gene = trainGenerator(batch_size, temp_folder_path, PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, data_gen_args)
         model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
         model_checkpoint = ModelCheckpoint(os.path.join(working_parent_folder,str(i),'checkpoint.hdf5'), monitor = 'loss', verbose=1, save_best_only=True)
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 1, epochs = 5, callbacks = [model_checkpoint])
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 10, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
     return history
@@ -257,7 +257,7 @@ if __name__ == '__main__':
             np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)
             img_score_polar = np.load(np_file_polar)
             img_score_carte = np.load(np_file_carte)
-            migrating_wizard = migrator(img_score_polar,img_score_carte)
+            migrating_wizard = migrator(img_score_polar,img_score_carte, K)
             first_split = migrating_wizard.get_loc_current()
             true_indices = np.where(first_split)[0]
             false_indices = np.where(~first_split)[0]
@@ -271,8 +271,12 @@ if __name__ == '__main__':
             
         #now that we have all the temporary folders ready, we train the ten models
         polar_history, carte_history = train_2K_models()
+        #TODO: SAVE PLOT OF HISTORIES IN A FOLDER in png
         scorematrix = test(file_matrix)
-
+        scorematrix_name = 'scorematrix/scorematrix_round_' + str(round) + '.npy'
+        np.save(scorematrix_name, scorematrix)
+        migrating_wizard.decide_and_mod_prob(scorematrix)
+        migrating_wizard.migrate()
 
           
 '''
