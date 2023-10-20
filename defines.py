@@ -15,6 +15,7 @@ PARAM_SUB_FOLDER_CARTE = 'cartesian'
 PARAM_IMG_FOLDER = 'image'
 PARAM_MSK_FOLDER = 'label'
 
+PARAM_RESULTS = 'results'
 PARAM_SPLIT_NUM = 5
 
 

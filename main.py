@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import glob
 import os
 import shutil
+import time
 
 PARAM_BETA_TEST_NUM = 6
 K = 5
@@ -53,11 +54,16 @@ def train(working_parent_folder,data_gen_args):
         test_gene = trainGenerator(batch_size, temp_folder_path, PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, data_gen_args)
         model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
         model_checkpoint = ModelCheckpoint(os.path.join(working_parent_folder,str(i),'checkpoint.hdf5'), monitor = 'loss', verbose=1, save_best_only=True)
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 10, callbacks = [model_checkpoint])
+        print('Now Training the Model for folder',i)
+        if if_polar:
+            print('Now in polar group')
+        else:
+            print('Now in Cartesian group')
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 50, epochs = 5, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
     return history
-    
+
 def test(filematrix):
     n = filematrix.shape[0]
     m = K * 2
@@ -154,7 +160,31 @@ def train_2K_models():
 
     carte_history = train(PARAM_PATH_TEMP_CARTE, data_gen_args)
     return (polar_history, carte_history)
-                
+
+def model_PNGgen(polar_history,carte_history,round):
+    models_path = os.path.join(PARAM_RESULTS,'models/round_'+str(round))
+    os.mkdir(models_path)
+    i=0
+    for single_run in polar_history:
+        plt.plot(single_run.history['loss'])
+        plt.plot(single_run.history['accuracy'])
+        plt.title('Polar Run')
+        plt.xlabel('epoch')
+        plt.legend(['loss', 'accuracy'], loc='upper left')
+        plt.savefig(os.path.join(models_path,'polar_'+str(i)+'.jpg'))
+        i+=1
+
+    i =0
+    for single_run in carte_history:
+        plt.plot(single_run.history['loss'])
+        plt.plot(single_run.history['accuracy'])
+        plt.title('Cartesian Run')
+        plt.xlabel('epoch')
+        plt.legend(['loss', 'accuracy'], loc='upper left')
+        plt.savefig(os.path.join(models_path,'carte_'+str(i)+'.jpg'))    
+        i+=1
+    print("models saved")
+
 def dice_coefficient(image1, image2):#Generate the Dice coefficient of two binary images, should do thresholding before inputting
     # Ensure the input images have the same shape
     smooth = 1
@@ -175,8 +205,7 @@ def dice_coefficient(image1, image2):#Generate the Dice coefficient of two binar
     sum_image1_f = img1_f.sum()
     sum_image2_f = img2_f.sum()
     #print(sum_image1_f,sum_image2_f)
-    #if(sum_image1 == sum_image2 == 0):#I'm not so sure about this o.0
-        #return 1.0
+   
     # Calculate the Dice coefficient
     dice = (2.0 * intersection_o + smooth) / (sum_image1_o + sum_image2_o + smooth)
     #print('dice',dice)
@@ -231,7 +260,10 @@ def filematrixPNG_gen(K):
                 filematrix[int(file_name_raw),i + for_counter * K] = 1
             #number_of_ones = np.count_nonzero(filematrix == 1)
             #print(number_of_ones)  #uncomment this line when png file is not satisfactory, we can track the number of ones during each step  
-    plt.imsave('filematrix.png', filematrix, cmap = 'binary')
+    
+    # filematrix_name = 'filematrix/filematrix_round_'+str(round)+'.png'
+    # filematrix_path = os.path.join(PARAM_RESULTS,filematrix_name)
+    # plt.imsave(filematrix_path, file_matrix, cmap = 'binary')
     print('File Location saved as filematrix.png')
     return filematrix
     
@@ -247,7 +279,7 @@ if __name__ == '__main__':
     K = 5
 
     #while True:   
-    for round in range(2):
+    for round in range(4):
     # step1: file relocation 
         if is_first_round:
             is_first_round = False
@@ -263,18 +295,26 @@ if __name__ == '__main__':
             false_indices = np.where(~first_split)[0]
             file_matrix = make_K_folds(true_indices,false_indices,K)
             
+            
         else:
             split = migrating_wizard.get_loc_current()
             true_indices = np.where(split)[0]
             false_indices = np.where(~split)[0]
             file_matrix = make_K_folds(true_indices,false_indices,K)
-            
+
+        filematrix_name = 'filematrix/filematrix_round_'+str(round)+'.png'
+        filematrix_path = os.path.join(PARAM_RESULTS,filematrix_name)
+        plt.imsave(filematrix_path, file_matrix, cmap = 'binary')
+
         #now that we have all the temporary folders ready, we train the ten models
         polar_history, carte_history = train_2K_models()
-        #TODO: SAVE PLOT OF HISTORIES IN A FOLDER in png
+
+        #TODO: SAVE PLOT OF HISTORIES IN A RESULTS 
+        model_PNGgen(polar_history,carte_history,round)
         scorematrix = test(file_matrix)
         scorematrix_name = 'scorematrix/scorematrix_round_' + str(round) + '.npy'
-        np.save(scorematrix_name, scorematrix)
+        scorematrix_path = os.path.join(PARAM_RESULTS,scorematrix_name)
+        np.save(scorematrix_path, scorematrix)
         migrating_wizard.decide_and_mod_prob(scorematrix)
         migrating_wizard.migrate()
 
