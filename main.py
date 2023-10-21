@@ -3,17 +3,11 @@ from model import *
 from data import *
 from filePrep import *
 from migration_yz.migrator import *
-import sys
+from model_reader.modelreader import *
 
 import cv2
-from numpy import loadtxt
-from keras.models import load_model
-from PIL import Image
 
 from sklearn.model_selection import KFold
-from skimage.io import imread
-from skimage import img_as_ubyte
-from skimage.transform import resize
 
 import numpy as np
 import pandas as pd
@@ -21,13 +15,14 @@ import matplotlib.pyplot as plt
 import glob
 import os
 import shutil
-import time
+import random
+import multiprocessing
 
 PARAM_BETA_TEST_NUM = 6
 K = 5
 
-def train(working_parent_folder,data_gen_args):
-    batch_size = 4
+def train(working_parent_folder,data_gen_args, queue):
+    batch_size = 3
     history = []
     if_polar = False
     if working_parent_folder == PARAM_PATH_TEMP_POLAR:
@@ -59,14 +54,18 @@ def train(working_parent_folder,data_gen_args):
             print('Now in polar group')
         else:
             print('Now in Cartesian group')
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 50, epochs = 5, callbacks = [model_checkpoint])
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 100, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
-    return history
+        loss_curve = []
+        for eachrun in history:
+            loss_curve.append(eachrun.history['loss'])
+    queue.put(loss_curve) 
 
-def test(filematrix):
+def test(filematrix, queue):
     n = filematrix.shape[0]
     m = K * 2
+    scorematrix = np.zeros((n,m))
     image_extension = 'tif'
     augmented_filematrix = np.copy(filematrix)
     for row in augmented_filematrix:
@@ -110,8 +109,8 @@ def test(filematrix):
                     shutil.copy2(src, temp_test_img_folder)
                     src = os.path.join(src_folder,PARAM_MSK_FOLDER,img_name)
                     shutil.copy2(src, temp_test_msk_folder)
-            
             model_path = os.path.join(working_parent_folder, str(i), 'checkpoint.hdf5')
+            print('Now working with path', model_path)
             current_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
             current_model.load_weights(model_path) 
             for test_image_name in os.listdir(temp_test_img_folder):
@@ -127,19 +126,24 @@ def test(filematrix):
                 ground_truth_mask = cv2.imread(ground_truth_mask_path, cv2.IMREAD_GRAYSCALE)
                 ground_truth_mask = ground_truth_mask / 255.0
                 ground_truth_mask = ground_truth_mask.astype(np.uint8)
-                
+                ###HERE IS WHERE PREDICT AND GENERATE SCORE
                 prediction = current_model.predict(test_image, verbose = 0)
                 
                 threshold = 0.5
                 binary_mask = (prediction > threshold).astype(np.uint8)
                 binary_mask = binary_mask[0,:,:,0]
                 dice = dice_coefficient(ground_truth_mask, binary_mask)
-                scorematrix[int(test_image_name_raw), current_folder_index] = dice
-            print('Done with folder ', current_folder_index)
-    return scorematrix        
+                ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
+                ###HERE IS THE QUICK SCORE GENERATOR 
+                #dice = random.random()
+                ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
+                scorematrix[int(test_image_name_raw), current_folder_index] = dice   
+    queue.put(scorematrix)
+         
 
 
-def train_2K_models():
+def train_2K_models(round):        
+    queue = multiprocessing.Queue()
     data_gen_args = dict(rotation_range = 50,      # TODO: improve the data augmentation
                 width_shift_range =0.2,
                 height_shift_range =0.2,
@@ -148,7 +152,11 @@ def train_2K_models():
                 horizontal_flip = True,
                 fill_mode = 'nearest',
                 rescale = 1./255)
-    polar_history = train(PARAM_PATH_TEMP_POLAR, data_gen_args)
+    PP = multiprocessing.Process(target=train, args= ([PARAM_PATH_TEMP_POLAR, data_gen_args, queue]))
+    PP.start()
+    polar_history = queue.get()
+    PP.join()
+    
     data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
                 width_shift_range =0.02,
                 height_shift_range =0.02,
@@ -157,13 +165,29 @@ def train_2K_models():
                 horizontal_flip = True,
                 fill_mode = 'nearest',
                 rescale = 1./255)
+    PC = multiprocessing.Process(target=train, args= ([PARAM_PATH_TEMP_CARTE, data_gen_args, queue]))
+    PC.start()
+    carte_history = queue.get()
+    PC.join()
+    #model_PNGgen(polar_history, carte_history, round)
+    #print(polar_history)
+    model_npyStore(polar_history,carte_history,round)
+    
+def model_npyStore(polar_history, carte_history, round):
+    models_history_path = os.path.join(PARAM_RESULTS,'models_history/round_'+str(round))
+    os.makedirs(models_history_path, exist_ok = True)
+    np_p_history = np.asarray(polar_history)
+    np_c_history = np.asarray(carte_history)
+    np_p_history_path = os.path.join(models_history_path, 'polar_history.npy')
+    np_c_history_path = os.path.join(models_history_path, 'carte_history.npy')
+    np.save(np_p_history_path,np_p_history)
+    np.save(np_c_history_path,np_c_history)
+    
 
-    carte_history = train(PARAM_PATH_TEMP_CARTE, data_gen_args)
-    return (polar_history, carte_history)
 
 def model_PNGgen(polar_history,carte_history,round):
     models_path = os.path.join(PARAM_RESULTS,'models/round_'+str(round))
-    os.mkdir(models_path)
+    os.makedirs(models_path, exist_ok = True)
     i=0
     for single_run in polar_history:
         plt.plot(single_run.history['loss'])
@@ -277,10 +301,11 @@ if __name__ == '__main__':
     # os.system("tree -d")
     is_first_round = True
     K = 5
-
+    model_reader = modelreader()
     #while True:   
     for round in range(4):
     # step1: file relocation 
+        print('Now is round', round)
         if is_first_round:
             is_first_round = False
             score_file_polar = 'analysis_dice_back_Train_P.npy'
@@ -307,19 +332,30 @@ if __name__ == '__main__':
         plt.imsave(filematrix_path, file_matrix, cmap = 'binary')
 
         #now that we have all the temporary folders ready, we train the ten models
-        polar_history, carte_history = train_2K_models()
+        train_2K_models(round)
 
         #TODO: SAVE PLOT OF HISTORIES IN A RESULTS 
-        model_PNGgen(polar_history,carte_history,round)
-        scorematrix = test(file_matrix)
+        #model_PNGgen(polar_history,carte_history,round)
+        queue = multiprocessing.Queue()
+        PT = multiprocessing.Process(target=test,args=([file_matrix,queue]))
+        PT.start()
+        scorematrix = queue.get()
+        PT.join()
         scorematrix_name = 'scorematrix/scorematrix_round_' + str(round) + '.npy'
         scorematrix_path = os.path.join(PARAM_RESULTS,scorematrix_name)
         np.save(scorematrix_path, scorematrix)
         migrating_wizard.decide_and_mod_prob(scorematrix)
         migrating_wizard.migrate()
+        history = migrating_wizard.get_loc_history()
+        history_name = 'history/history_round_' + str(round) + '.npy'
+        history_path = os.path.join(PARAM_RESULTS,history_name)
+        np.save(history_path, history)
+        
+
 
           
-'''
+'''for job in jobs:
+    job.join()
 	# if 1st round:
         #First round should have the two scorefiles input into the migrator, generate the first round of location matrix 
         #sort scores in descending order and store index
