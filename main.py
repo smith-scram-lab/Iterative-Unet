@@ -316,8 +316,13 @@ if __name__ == '__main__':
             img_score_carte = np.load(np_file_carte)
             migrating_wizard = migrator(img_score_polar,img_score_carte, K)
             first_split = migrating_wizard.get_loc_current()
-            true_indices = np.where(first_split)[0]
-            false_indices = np.where(~first_split)[0]
+            #------------Use the highest half as polar---------------
+            #true_indices = np.where(first_split)[0]
+            #false_indices = np.where(~first_split)[0]
+            #------------Use the lowest half as polar---------------
+            true_indices = np.where(~first_split)[0]
+            false_indices = np.where(first_split)[0]
+            #-------------------------------------------------------
             file_matrix = make_K_folds(true_indices,false_indices,K)
             
             
@@ -350,6 +355,10 @@ if __name__ == '__main__':
         history_name = 'history/history_round_' + str(round) + '.npy'
         history_path = os.path.join(PARAM_RESULTS,history_name)
         np.save(history_path, history)
+        prob_history = migrating_wizard.get_prob_history()
+        prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
+        prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
+        np.save(prob_history_path, prob_history)
         
 
 
