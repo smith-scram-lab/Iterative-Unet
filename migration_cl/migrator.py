@@ -1,6 +1,6 @@
 import numpy as np
 
-class Migrator:
+class migrator:
 
     def get_loc_history(self):
         return self.history
@@ -34,14 +34,14 @@ class Migrator:
         print('The number of moving: polar -> cartesian: ', number_of_ones_decision)
         number_of_minusones_decision = np.count_nonzero(decision == -1)
         print('The number of moving: cartesian -> polar: ', number_of_minusones_decision)
-        return diff, decision
+        return (diff, decision)
 
     def decide_move(self, num_max_move, diff, decision):
         current_loc = self.get_loc_current()
 
         num_polarToCarte = np.count_nonzero(decision == 1)
         num_carteToPolar = np.count_nonzero(decision == -1)
-        num_should_move = max(num_polarToCarte, num_carteToPolar)
+        num_should_move = min(num_polarToCarte, num_carteToPolar)
 
         if num_max_move > num_should_move:
             num_max_move = num_should_move
@@ -50,6 +50,7 @@ class Migrator:
         polarToCarte = sorted_diff[:num_max_move]
         carteToPolar = sorted_diff[-num_max_move:]
 
+        moving_count = [num_polarToCarte, num_carteToPolar]
         new_Location = current_loc.copy()
 
         count_moveto_polar = 0
@@ -68,7 +69,7 @@ class Migrator:
         print('Report\nNumber moved:', count_moveto_polar+count_moveto_carte, 'in total')
         print('The number of moving: polar -> cartesian: ', count_moveto_carte)
         print('The number of moving: cartesian -> polar: ', count_moveto_polar)
-
+        return moving_count
 
     def __init__(self, prev_p, prev_c, K):
         self.K = K

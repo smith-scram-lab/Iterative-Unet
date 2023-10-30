@@ -2,7 +2,8 @@ from defines import *
 from model import *
 from data import *
 from filePrep import *
-from migration_yz.migrator import *
+#from migration_yz.migrator import *
+from migration_cl.migrator import *
 from model_reader.modelreader import *
 
 import cv2
@@ -299,6 +300,7 @@ if __name__ == '__main__':
     # step0: enable GPU version
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # os.system("tree -d")
+    mov_count_his = []
     is_first_round = True
     K = 5
     model_reader = modelreader()
@@ -349,16 +351,25 @@ if __name__ == '__main__':
         scorematrix_name = 'scorematrix/scorematrix_round_' + str(round) + '.npy'
         scorematrix_path = os.path.join(PARAM_RESULTS,scorematrix_name)
         np.save(scorematrix_path, scorematrix)
-        migrating_wizard.decide_and_mod_prob(scorematrix)
-        migrating_wizard.migrate()
+        #this is yz method
+        '''migrating_wizard.decide_and_mod_prob(scorematrix)
+        migrating_wizard.migrate()'''
+        #End of yz method
+        #starting here is cl method
+        dif, decision = migrating_wizard.get_decision(K, scorematrix)
+        count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
+        mov_count_his.append(count_p2c_c2p)
+        #End of cl method
         history = migrating_wizard.get_loc_history()
         history_name = 'history/history_round_' + str(round) + '.npy'
         history_path = os.path.join(PARAM_RESULTS,history_name)
         np.save(history_path, history)
-        prob_history = migrating_wizard.get_prob_history()
+        print(mov_count_his)
+        #uncomment if yz method
+        '''prob_history = migrating_wizard.get_prob_history() 
         prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
         prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
-        np.save(prob_history_path, prob_history)
+        np.save(prob_history_path, prob_history)'''
         
 
 
