@@ -3,7 +3,8 @@ from model import *
 from data import *
 from filePrep import *
 #from migration_yz.migrator import *
-from migration_cl.migrator import *
+#from migration_cl.migrator import *
+from migration_cw.migrator import *
 from model_reader.modelreader import *
 
 import cv2
@@ -55,7 +56,7 @@ def train(working_parent_folder,data_gen_args, queue):
             print('Now in polar group')
         else:
             print('Now in Cartesian group')
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 100, callbacks = [model_checkpoint])
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 1, epochs = 1, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
         loss_curve = []
@@ -128,15 +129,15 @@ def test(filematrix, queue):
                 ground_truth_mask = ground_truth_mask / 255.0
                 ground_truth_mask = ground_truth_mask.astype(np.uint8)
                 ###HERE IS WHERE PREDICT AND GENERATE SCORE
-                prediction = current_model.predict(test_image, verbose = 0)
+                '''prediction = current_model.predict(test_image, verbose = 0)
                 
                 threshold = 0.5
                 binary_mask = (prediction > threshold).astype(np.uint8)
                 binary_mask = binary_mask[0,:,:,0]
-                dice = dice_coefficient(ground_truth_mask, binary_mask)
+                dice = dice_coefficient(ground_truth_mask, binary_mask)'''
                 ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
                 ###HERE IS THE QUICK SCORE GENERATOR 
-                #dice = random.random()
+                dice = random.random()
                 ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
@@ -351,15 +352,21 @@ if __name__ == '__main__':
         scorematrix_name = 'scorematrix/scorematrix_round_' + str(round) + '.npy'
         scorematrix_path = os.path.join(PARAM_RESULTS,scorematrix_name)
         np.save(scorematrix_path, scorematrix)
+
         #this is yz method
         '''migrating_wizard.decide_and_mod_prob(scorematrix)
         migrating_wizard.migrate()'''
         #End of yz method
+
         #starting here is cl method
-        dif, decision = migrating_wizard.get_decision(K, scorematrix)
+        '''dif, decision = migrating_wizard.get_decision(K, scorematrix)
         count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
-        mov_count_his.append(count_p2c_c2p)
+        mov_count_his.append(count_p2c_c2p)'''
         #End of cl method
+        
+        #Start of cw method
+        migrating_wizard.migrate(scorematrix)
+
         history = migrating_wizard.get_loc_history()
         history_name = 'history/history_round_' + str(round) + '.npy'
         history_path = os.path.join(PARAM_RESULTS,history_name)
