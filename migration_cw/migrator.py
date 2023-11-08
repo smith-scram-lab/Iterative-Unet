@@ -56,19 +56,26 @@ class migrator:
                 curr[i] = local - average
         k = len(curr)//2
         median = self.median_of_medians(curr, k)
-        if median < 0:
+        if median > 0:
             median = 0
         polar = 0
         cartesian = 0
         for i in range(len(curr)):
             if loc[i] and curr[i]< median:
-                loc[i] = False
                 polar += 1
-            elif curr[i]< median:
-                loc[i] = True
+            elif not loc[i] and curr[i]< median:
                 cartesian += 1
-            if polar > k//2 or cartesian > k//2:
-                i = len(curr)
+        polar = min(polar, cartesian)
+        cartesian = polar
+        i = 0
+        while i< len(curr) and polar > 0 and cartesian > 0:
+            if loc[i] and curr[i]< median:
+                loc[i] = False
+                polar -= 1
+            elif not loc[i] and curr[i]< median:
+                loc[i] = True
+                cartesian -= 1
+            i+=1
         self.history = np.append(self.history,loc[:, np.newaxis], axis = 1)
         
 
