@@ -17,15 +17,15 @@ class migrator:
             max_score = np.max(scorematrix[i])
             max_arg = np.argmax(scorematrix[i])
             if current_loc[i]: #if it is polar dominant
-                print('p d')
+                #print('p d')
                 if max_arg >= self.K: #need to move to cartesian
-                    print('need to move to cartesian')
+                    #print('need to move to cartesian')
                     decision[i] = 1
                     diff[i] = np.max(scorematrix[i][0:self.K]) - np.max(scorematrix[i]) #negative
             else: #if it is cartesian dominant
-                print('c d')
+                #print('c d')
                 if max_arg < self.K: #need to move to polar
-                    print('need to move to polar')
+                    #print('need to move to polar')
                     decision[i] = -1
                     diff[i] = np.max(scorematrix[i]) - np.max(scorematrix[i][self.K:]) #positive
 
