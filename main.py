@@ -3,9 +3,10 @@ from model import *
 from data import *
 from filePrep import *
 #from migration_yz.migrator import *
-#from migration_cl.migrator import *
-from migration_cw.migrator import *
+from migration_cl.migrator import *
+#from migration_cw.migrator import *
 from model_reader.modelreader import *
+from p2ctransformer.p2c import *
 
 import cv2
 
@@ -56,7 +57,7 @@ def train(working_parent_folder,data_gen_args, queue):
             print('Now in polar group')
         else:
             print('Now in Cartesian group')
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 1, epochs = 1, callbacks = [model_checkpoint])
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 100, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
         loss_curve = []
@@ -129,20 +130,102 @@ def test(filematrix, queue):
                 ground_truth_mask = ground_truth_mask / 255.0
                 ground_truth_mask = ground_truth_mask.astype(np.uint8)
                 ###HERE IS WHERE PREDICT AND GENERATE SCORE
-                '''prediction = current_model.predict(test_image, verbose = 0)
+                prediction = current_model.predict(test_image, verbose = 0)
                 
                 threshold = 0.5
                 binary_mask = (prediction > threshold).astype(np.uint8)
                 binary_mask = binary_mask[0,:,:,0]
-                dice = dice_coefficient(ground_truth_mask, binary_mask)'''
+                if img_type == 'polar':
+                    dice = dice_coefficient(ground_truth_mask, binary_mask)
+                else:
+                    dice = dice_coefficient_carte(ground_truth_mask, binary_mask)
                 ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
                 ###HERE IS THE QUICK SCORE GENERATOR 
-                dice = random.random()
+                #dice = random.random()
                 ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
          
+def test_allinc(filematrix, queue):
+    n = filematrix.shape[0]
+    m = K * 2
+    scorematrix = np.zeros((n,m))
+    trans_dic = p2c_dic_gen(127, 127, 256, 256)
+    image_extension = 'tif'
+    augmented_filematrix = np.copy(filematrix)
+    for row in augmented_filematrix:
+        for for_counter in range(2):
+            zero_count = 0
+            for index in range(K):
+                real_index = index + for_counter * K
+                if row[real_index] == 0:
+                    zero_count += 1
+            if zero_count == 5:
+                row[for_counter*K:for_counter*K + 5] = 1
+    row_indices, col_indices = np.where(augmented_filematrix == 1)
+    indices = list(zip(row_indices, col_indices))
+    scorematrix = np.zeros((n,m))
+    for img_type in ['polar', 'carte']:
+        for_counter = 0
+        ground_truth_src_folder = PARAM_PATH_CARTE
+        if img_type == 'polar':
+            working_parent_folder = PARAM_PATH_TEMP_POLAR
+            src_folder = PARAM_PATH_POLAR
+        else:
+            working_parent_folder = PARAM_PATH_TEMP_CARTE
+            src_folder = PARAM_PATH_CARTE
+            for_counter = 1
+            
+        for i in range(K):
+            current_folder_index = i + for_counter * K
+            temp_test_folder_name = 'temptest'
+            #print(working_parent_folder)
+                
+            if os.path.exists(temp_test_folder_name):
+                shutil.rmtree(temp_test_folder_name)
+            temp_test_img_folder = os.path.join(temp_test_folder_name,PARAM_IMG_FOLDER)
+            temp_test_msk_folder = os.path.join(temp_test_folder_name,PARAM_MSK_FOLDER)
+            os.makedirs(temp_test_img_folder)
+            os.makedirs(temp_test_msk_folder)
+        
+            for indice in indices:
+                if indice[1] == current_folder_index:
+                    img_name = str(indice[0]) + '.' + image_extension
+                    src = os.path.join(src_folder,PARAM_IMG_FOLDER,img_name)
+                    shutil.copy2(src, temp_test_img_folder)
+                    src = os.path.join(ground_truth_src_folder,PARAM_MSK_FOLDER,img_name)
+                    shutil.copy2(src, temp_test_msk_folder)
+            model_path = os.path.join(working_parent_folder, str(i), 'checkpoint.hdf5')
+            print('Now working with path', model_path)
+            current_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
+            current_model.load_weights(model_path) 
+            for test_image_name in os.listdir(temp_test_img_folder):
+                test_image_name_raw, ext = os.path.splitext(test_image_name)
+                image_path = os.path.join(temp_test_img_folder, test_image_name)
+                ground_truth_mask_path = os.path.join(temp_test_msk_folder, test_image_name)
+                
+                test_image = cv2.imread(image_path)
+                test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2RGB)
+                test_image = test_image / 255.0
+                test_image = np.expand_dims(test_image,axis = 0)
 
+                ground_truth_mask = cv2.imread(ground_truth_mask_path, cv2.IMREAD_GRAYSCALE)
+                ground_truth_mask = ground_truth_mask / 255.0
+                ground_truth_mask = ground_truth_mask.astype(np.uint8)
+                ###HERE IS WHERE PREDICT AND GENERATE SCORE
+                prediction = current_model.predict(test_image, verbose = 0)
+                threshold = 0.5
+                binary_mask = (prediction > threshold).astype(np.uint8)
+                binary_mask = binary_mask[0,:,:,0]
+                if img_type == 'polar':
+                    binary_mask = p2c(binary_mask, trans_dic)
+                dice = dice_coefficient_carte(ground_truth_mask, binary_mask)
+                ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
+                ###HERE IS THE QUICK SCORE GENERATOR 
+                #dice = random.random()
+                ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
+                scorematrix[int(test_image_name_raw), current_folder_index] = dice   
+    queue.put(scorematrix)
 
 def train_2K_models(round):        
     queue = multiprocessing.Queue()
@@ -241,7 +324,35 @@ def dice_coefficient(image1, image2):#Generate the Dice coefficient of two binar
     #print('dice_avg', dice_avg)
     return dice_avg
 
-
+def dice_coefficient_carte(image1, image2):#Generate the Dice coefficient of two binary images, should do thresholding before inputting
+    # Ensure the input images have the same shape
+    smooth = 1
+    if image1.shape != image2.shape:
+        raise ValueError("Input images must have the same shape.")
+    image1 = np.matrix(image1)
+    image2 = np.matrix(image2)
+    img1_f = (~image1.astype(bool)).astype(int)
+    img2_f = (~image2.astype(bool)).astype(int)
+    # Calculate the intersection (logical AND) between the two binary images
+    intersection_o = np.logical_and(image1, image2).sum()
+    intersection_f = np.logical_and(img1_f, img2_f).sum()
+    #print(intersection_o,intersection_f)
+    # Calculate the sum of pixels in each image
+    sum_image1_o = image1.sum()
+    sum_image2_o = image2.sum()
+    #print(sum_image1_o,sum_image2_o)
+    sum_image1_f = img1_f.sum()
+    sum_image2_f = img2_f.sum()
+    #print(sum_image1_f,sum_image2_f)
+   
+    # Calculate the Dice coefficient
+    dice = (2.0 * intersection_o + smooth) / (sum_image1_o + sum_image2_o + smooth)
+    #print('dice',dice)
+    dice_f = (2.0 * (intersection_f - 14616) + smooth) / (sum_image1_f + sum_image2_f + smooth - 29232) #Hard-coded numbers here, need to prove 
+    #print('dice_f',dice_f)
+    dice_avg = (dice + dice_f) / 2.0
+    #print('dice_avg', dice_avg)
+    return dice_avg
 
 def make_K_folds(polar_indices,carte_indices,K):
     checkNcreateTempFolder(PARAM_PATH_TEMP_POLAR, K)
@@ -306,7 +417,7 @@ if __name__ == '__main__':
     K = 5
     model_reader = modelreader()
     #while True:   
-    for round in range(4):
+    for round in range(10):
     # step1: file relocation 
         print('Now is round', round)
         if is_first_round:
@@ -317,15 +428,11 @@ if __name__ == '__main__':
             np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)
             img_score_polar = np.load(np_file_polar)
             img_score_carte = np.load(np_file_carte)
-            migrating_wizard = migrator(img_score_polar,img_score_carte, K)
+            migrating_wizard = migrator(img_score_polar,img_score_carte, K, ifFlip = True)
             first_split = migrating_wizard.get_loc_current()
-            #------------Use the highest half as polar---------------
-            #true_indices = np.where(first_split)[0]
-            #false_indices = np.where(~first_split)[0]
-            #------------Use the lowest half as polar---------------
-            true_indices = np.where(~first_split)[0]
-            false_indices = np.where(first_split)[0]
-            #-------------------------------------------------------
+            true_indices = np.where(first_split)[0]
+            false_indices = np.where(~first_split)[0]
+
             file_matrix = make_K_folds(true_indices,false_indices,K)
             
             
@@ -342,10 +449,9 @@ if __name__ == '__main__':
         #now that we have all the temporary folders ready, we train the ten models
         train_2K_models(round)
 
-        #TODO: SAVE PLOT OF HISTORIES IN A RESULTS 
         #model_PNGgen(polar_history,carte_history,round)
         queue = multiprocessing.Queue()
-        PT = multiprocessing.Process(target=test,args=([file_matrix,queue]))
+        PT = multiprocessing.Process(target=test_allinc,args=([file_matrix,queue]))
         PT.start()
         scorematrix = queue.get()
         PT.join()
@@ -359,13 +465,14 @@ if __name__ == '__main__':
         #End of yz method
 
         #starting here is cl method
-        '''dif, decision = migrating_wizard.get_decision(K, scorematrix)
+        dif, decision = migrating_wizard.get_decision(K, scorematrix)
         count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
-        mov_count_his.append(count_p2c_c2p)'''
+        mov_count_his.append(count_p2c_c2p)
         #End of cl method
         
         #Start of cw method
-        migrating_wizard.migrate(scorematrix)
+        #migrating_wizard.migrate(scorematrix)
+        #End of cw method
 
         history = migrating_wizard.get_loc_history()
         history_name = 'history/history_round_' + str(round) + '.npy'

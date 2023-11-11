@@ -12,8 +12,8 @@ class migrator:
         current_loc = self.get_loc_current()
         decision = np.zeros([self.n,1])
         diff = np.zeros([self.n,1])
-
-        for i in range(self.n):
+        #This following is for comparing in-group to maximum of the other group
+        '''for i in range(self.n):
             max_score = np.max(scorematrix[i])
             max_arg = np.argmax(scorematrix[i])
             if current_loc[i]: #if it is polar dominant
@@ -27,8 +27,26 @@ class migrator:
                 if max_arg < self.K: #need to move to polar
                     #print('need to move to polar')
                     decision[i] = -1
-                    diff[i] = np.max(scorematrix[i]) - np.max(scorematrix[i][self.K:]) #positive
-
+                    diff[i] = np.max(scorematrix[i]) - np.max(scorematrix[i][self.K:]) #positive'''
+        #This following is for comparing in-group to median of the other group        
+        for i in range(self.n):
+            if current_loc[i]:
+                polar_score = np.max(scorematrix[i][0:self.K])
+                carte_score = np.median(scorematrix[i][self.K:])
+                if carte_score > polar_score:
+                    dif = polar_score - carte_score
+                    if abs(dif) >= self.Trans_threshold:
+                        decision[i] = 1
+                        diff[i] = polar_score - carte_score
+            else:
+                polar_score = np.median(scorematrix[i][0:self.K])
+                carte_score = np.max(scorematrix[i][self.K:])
+                if carte_score < polar_score:
+                    dif = polar_score - carte_score
+                    if abs(dif) >= self.Trans_threshold:
+                        decision[i] = -1
+                        diff[i] = polar_score - carte_score
+        #-------------------------------------------------------
         print(decision)
         number_of_ones_decision = np.count_nonzero(decision == 1)
         print('The number of moving: polar -> cartesian: ', number_of_ones_decision)
@@ -71,10 +89,11 @@ class migrator:
         print('The number of moving: cartesian -> polar: ', count_moveto_polar)
         return moving_count
 
-    def __init__(self, prev_p, prev_c, K):
+    def __init__(self, prev_p, prev_c, K, Trans_threshold = 0.3, ifFlip = False):
         self.K = K
         polar_minus_c_dif = prev_p - prev_c
         self.n = polar_minus_c_dif.shape[0]
+        self.Trans_threshold = Trans_threshold
         self.history = np.zeros([self.n,1], dtype = np.bool)
         threshold = np.median(polar_minus_c_dif)#take the median for even split
         i = 0
@@ -84,6 +103,8 @@ class migrator:
             else:
                 self.history[i] = False
             i += 1
+        if ifFlip:
+            self.history = ~self.history
 
 
 
