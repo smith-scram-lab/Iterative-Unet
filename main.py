@@ -23,9 +23,9 @@ import multiprocessing
 
 PARAM_BETA_TEST_NUM = 6
 K = 5
+batch_size = 1
 
-def train(working_parent_folder,data_gen_args, queue):
-    batch_size = 3
+def train(working_parent_folder,data_gen_args, queue):    
     history = []
     if_polar = False
     if working_parent_folder == PARAM_PATH_TEMP_POLAR:
@@ -57,7 +57,7 @@ def train(working_parent_folder,data_gen_args, queue):
             print('Now in polar group')
         else:
             print('Now in Cartesian group')
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = 100, epochs = 100, callbacks = [model_checkpoint])
+        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
         history.append(test_run)
         shutil.rmtree(temp_folder_path)
         loss_curve = []
@@ -213,19 +213,76 @@ def test_allinc(filematrix, queue):
                 ground_truth_mask = ground_truth_mask / 255.0
                 ground_truth_mask = ground_truth_mask.astype(np.uint8)
                 ###HERE IS WHERE PREDICT AND GENERATE SCORE
-                prediction = current_model.predict(test_image, verbose = 0)
+                '''prediction = current_model.predict(test_image, verbose = 0)
                 threshold = 0.5
                 binary_mask = (prediction > threshold).astype(np.uint8)
                 binary_mask = binary_mask[0,:,:,0]
                 if img_type == 'polar':
                     binary_mask = p2c(binary_mask, trans_dic)
-                dice = dice_coefficient_carte(ground_truth_mask, binary_mask)
+                dice = dice_coefficient_carte(ground_truth_mask, binary_mask)'''
                 ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
                 ###HERE IS THE QUICK SCORE GENERATOR 
-                #dice = random.random()
+                dice = random.random()
                 ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
+
+def train_and_test_last_round(migrating_wizard):
+    split = migrating_wizard.get_loc_current()
+    
+    true_indices = np.where(split)[0]
+    false_indices = np.where(~split)[0]
+    if os.path.exists('./temp_lastround'):
+        shutil.rmtree('./temp_lastround')
+    os.makedirs('./temp_lastround/cartesian_Dom/image')
+    os.makedirs('./temp_lastround/cartesian_Dom/label')
+    os.makedirs('./temp_lastround/polar_Dom/image')
+    os.makedirs('./temp_lastround/polar_Dom/label')
+    
+    i = 0
+    for item in true_indices:
+        img_name = str(item) + '.tif'
+        src = os.path.join(PARAM_PATH_POLAR, PARAM_IMG_FOLDER, img_name)
+        shutil.copy2(src, os.path.join('./temp_lastround/polar_Dom/image'))
+        src = os.path.join(PARAM_PATH_POLAR, PARAM_MSK_FOLDER, img_name)
+        shutil.copy2(src, os.path.join('./temp_lastround/polar_Dom/label'))
+    for item in false_indices:
+        img_name = str(item) + '.tif'
+        src = os.path.join(PARAM_PATH_CARTE, PARAM_IMG_FOLDER, img_name)
+        shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/image'))
+        src = os.path.join(PARAM_PATH_CARTE, PARAM_MSK_FOLDER, img_name)
+        shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/label'))
+    polar_data_gen_args = dict(rotation_range = 50,      # TODO: improve the data augmentation
+                width_shift_range =0.2,
+                height_shift_range =0.2,
+                shear_range = 0.35,
+                zoom_range = 0.05,
+                horizontal_flip = True,
+                fill_mode = 'nearest',
+                rescale = 1./255)
+    polar_train_gene = trainGenerator(batch_size, './temp_lastround/polar_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, polar_data_gen_args)
+    polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
+    polar_model_checkpoint = ModelCheckpoint('./temp_lastround/polar_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
+    polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
+    polar_test_gene = testGenerator('./data/endoscopic_test956/polar', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
+    polar_results = polar_model.predict_generator(polar_test_gene, 956, verbose=1)
+    np.save('./results/polar_prediction.npy',polar_results)
+
+    carte_data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
+                width_shift_range =0.02,
+                height_shift_range =0.02,
+                shear_range = 0.35,
+                zoom_range = 0.075,
+                horizontal_flip = True,
+                fill_mode = 'nearest',
+                rescale = 1./255)
+    carte_train_gene = trainGenerator(batch_size, './temp_lastround/cartesian_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, carte_data_gen_args)
+    carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
+    carte_model_checkpoint = ModelCheckpoint('./temp_lastround/cartesian_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
+    carte_model.fit(carte_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
+    carte_test_gene = testGenerator('./data/endoscopic_test956/cartesian', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
+    carte_results = carte_model.predict_generator(carte_test_gene, 956, verbose=1)
+    np.save('./results/carte_prediction.npy',carte_results)
 
 def train_2K_models(round):        
     queue = multiprocessing.Queue()
@@ -417,7 +474,7 @@ if __name__ == '__main__':
     K = 5
     model_reader = modelreader()
     #while True:   
-    for round in range(10):
+    for round in range(1):
     # step1: file relocation 
         print('Now is round', round)
         if is_first_round:
@@ -478,12 +535,13 @@ if __name__ == '__main__':
         history_name = 'history/history_round_' + str(round) + '.npy'
         history_path = os.path.join(PARAM_RESULTS,history_name)
         np.save(history_path, history)
-        print(mov_count_his)
+    print(mov_count_his)
+    train_and_test_last_round(migrating_wizard)
         #uncomment if yz method
-        '''prob_history = migrating_wizard.get_prob_history() 
-        prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
-        prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
-        np.save(prob_history_path, prob_history)'''
+    '''prob_history = migrating_wizard.get_prob_history() 
+    prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
+    prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
+    np.save(prob_history_path, prob_history)'''
         
 
 

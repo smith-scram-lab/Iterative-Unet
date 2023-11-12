@@ -120,7 +120,7 @@ def testGenerator(test_path, image_folder, mask_folder,
     assert len(img_paths) == len(lbl_paths), errmsg1
     assert len(img_paths) > 0, errmsg2
 
-    return images,labels
+    return images
 
 
 def geneTrainNpy(image_path,mask_path,flag_multi_class = False,num_class = 2,image_prefix = "image",mask_prefix = "mask",image_as_gray = True,mask_as_gray = True):
