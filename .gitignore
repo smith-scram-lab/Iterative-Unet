@@ -4,3 +4,7 @@ __pycache__/
 *.hdf5
 temp/
 temptest/
+temp_lastround/
+*/polar_prediction.npy
+*/carte_prediction.npy
+*.zip
