@@ -8,6 +8,9 @@ PARAM_PATH_TEMP_CARTE = './temp/cartesian_Dom'
 PARAM_PATH_TEMP_POLAR = './temp/polar_Dom'
 PARMA_PATH_TEST_CARTE = './data/endoscopic_test956/cartesian'
 PARAM_PATH_TEST_POLAR = './data/endoscopic_test956/polar'
+PARAM_PATH_TEMP_POLAR = './temp/polar_Dom'
+PARMA_PATH_TEST_CARTE = './data/endoscopic_test956/cartesian'
+PARAM_PATH_TEST_POLAR = './data/endoscopic_test956/polar'
 
 PARAM_BETA1 = [0.2, 0.4, 0.6, 0.4, 0.2, 0.5, 0.5]
 PARAM_BETA2 = [0.8, 0.4, 0.8, 0.999, 0.999, 0.5, 0.999]
