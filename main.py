@@ -26,7 +26,6 @@ K = 5
 batch_size = 10
 
 def train(working_parent_folder,data_gen_args, queue):    
-def train(working_parent_folder,data_gen_args, queue):    
     history = []
     if_polar = False
     if working_parent_folder == PARAM_PATH_TEMP_POLAR:
@@ -215,16 +214,16 @@ def test_allinc(filematrix, queue):
                 ground_truth_mask = ground_truth_mask / 255.0
                 ground_truth_mask = ground_truth_mask.astype(np.uint8)
                 ###HERE IS WHERE PREDICT AND GENERATE SCORE
-                '''prediction = current_model.predict(test_image, verbose = 0)
+                prediction = current_model.predict(test_image, verbose = 0)
                 threshold = 0.5
                 binary_mask = (prediction > threshold).astype(np.uint8)
                 binary_mask = binary_mask[0,:,:,0]
                 if img_type == 'polar':
                     binary_mask = p2c(binary_mask, trans_dic)
-                dice = dice_coefficient_carte(ground_truth_mask, binary_mask)'''
+                dice = dice_coefficient_carte(ground_truth_mask, binary_mask)
                 ###REPLACE WITH QUICK SCORE GENERATOR TO DEBUG THE ITERATION GROUP
                 ###HERE IS THE QUICK SCORE GENERATOR 
-                dice = random.random()
+                #dice = random.random()
                 ###REPLACE WITH REAL PREDICT BLOCK FOR NORMAL ACTION
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
