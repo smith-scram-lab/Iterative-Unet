@@ -21,9 +21,9 @@ import shutil
 import random
 import multiprocessing
 
-PARAM_BETA_TEST_NUM = 6
+
 K = 5
-batch_size = 10
+batch_size = 5
 
 def train(working_parent_folder,data_gen_args, queue):    
     history = []
@@ -228,7 +228,7 @@ def test_allinc(filematrix, queue):
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
 
-def train_and_test_last_round(migrating_wizard):
+'''def train_and_test_last_round(migrating_wizard):
     split = migrating_wizard.get_loc_current()
     
     true_indices = np.where(split)[0]
@@ -283,7 +283,7 @@ def train_and_test_last_round(migrating_wizard):
     carte_model.fit(carte_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
     carte_test_gene = testGenerator('./data/endoscopic_test956/cartesian', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
     carte_results = carte_model.predict_generator(carte_test_gene, 956, verbose=1)
-    np.save('./results/carte_prediction.npy',carte_results)
+    np.save('./results/carte_prediction.npy',carte_results)'''
 
 def train_and_test_last_round(migrating_wizard):
     split = migrating_wizard.get_loc_current()
@@ -537,7 +537,7 @@ if __name__ == '__main__':
         print('Now is round', round)
         if is_first_round:
             is_first_round = False
-            score_file_polar = 'analysis_dice_back_Train_P.npy'
+            score_file_polar = 'analysis_dice_back_Train_P2C.npy'
             score_file_carte = 'analysis_dice_back_Train_C.npy'
             np_file_polar = os.path.join(PARAM_PATH_SCORES, score_file_polar)
             np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)

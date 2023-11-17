@@ -5,6 +5,9 @@ __pycache__/
 temp/
 temptest/
 temp_lastround/
-*/polar_prediction.npy
-*/carte_prediction.npy
+**/polar_prediction.*
+**/carte_prediction.*
+**/big_polar_prediction.*
+**/big_carte_prediction.*
 *.zip
+history_results/results20231116/polar_prediction.npy
