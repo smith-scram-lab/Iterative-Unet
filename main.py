@@ -50,16 +50,40 @@ def train(working_parent_folder,data_gen_args, queue):
                             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
                             shutil.copy(src_file, dest_file)
         test_gene = trainGenerator(batch_size, temp_folder_path, PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, data_gen_args)
-        model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
-        model_checkpoint = ModelCheckpoint(os.path.join(working_parent_folder,str(i),'checkpoint.hdf5'), monitor = 'loss', verbose=1, save_best_only=True)
         print('Now Training the Model for folder',i)
         if if_polar:
             print('Now in polar group')
         else:
             print('Now in Cartesian group')
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
-        test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
-        history.append(test_run)
+        model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
+        model_checkpoint_file = os.path.join(working_parent_folder,str(i),'checkpoint.hdf5')
+        model_checkpoint = ModelCheckpoint(model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+        keepGoing = True
+        force_restart_count = 0
+        force_restart_cumulative_count = 0
+        previou_min_loss = math.inf
+        while(keepGoing):
+            test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
+            force_restart_cumulative_count += EPOCHS
+            current_min = min(test_run.history['loss'])
+            if current_min <= previou_min_loss:
+                previou_min_loss = current_min
+                history.append(test_run)
+                force_restart_count = 0                
+            else:
+                if previou_min_loss < 0.3: 
+                    keepGoing = False
+                else:
+                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                        force_restart_count = 0
+                        force_restart_cumulative_count = 0
+                        previou_min_loss = math.inf
+                        os.remove(model_checkpoint_file)
+                        model_checkpoint = ModelCheckpoint(model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                        model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
+                    else:
+                        force_restart_count += 1
+                        model.load_weights(model_checkpoint_file)
         shutil.rmtree(temp_folder_path)
         loss_curve = []
         for eachrun in history:
@@ -320,11 +344,41 @@ def train_and_test_last_round(migrating_wizard):
                 rescale = 1./255)
     polar_train_gene = trainGenerator(batch_size, './temp_lastround/polar_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, polar_data_gen_args)
     polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
-    polar_model_checkpoint = ModelCheckpoint('./temp_lastround/polar_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
-    polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
+    polar_model_checkpoint_file = './temp_lastround/polar_Dom/checkpoint.hdf5'
+    polar_model_checkpoint = ModelCheckpoint(polar_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+
+    force_restart_cumulative_count = 0
+    force_restart_count = 0
+    previou_min_loss = math.inf
+    keepGoing = True
+    while(keepGoing):
+            test_run = polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
+            force_restart_cumulative_count += EPOCHS
+            current_min = min(test_run.history['loss'])
+            if current_min <= previou_min_loss:
+                previou_min_loss = current_min
+                force_restart_count = 0                
+            else:
+                if previou_min_loss < 0.3: 
+                    keepGoing = False
+                else:
+                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                        force_restart_count = 0
+                        force_restart_cumulative_count = 0
+                        previou_min_loss = math.inf
+                        os.remove(polar_model_checkpoint_file)
+                        polar_model_checkpoint = ModelCheckpoint(polar_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                        polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
+                    else:
+                        force_restart_count += 1
+                        polar_model.load_weights(polar_model_checkpoint_file)
+
     polar_test_gene = testGenerator('./data/endoscopic_test956/polar', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
     polar_results = polar_model.predict_generator(polar_test_gene, 956, verbose=1)
     np.save('./results/polar_prediction.npy',polar_results)
+
+    
+
 
     carte_data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
                 width_shift_range =0.02,
@@ -336,8 +390,35 @@ def train_and_test_last_round(migrating_wizard):
                 rescale = 1./255)
     carte_train_gene = trainGenerator(batch_size, './temp_lastround/cartesian_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, carte_data_gen_args)
     carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
-    carte_model_checkpoint = ModelCheckpoint('./temp_lastround/cartesian_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
-    carte_model.fit(carte_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
+    carte_model_checkpoint_file = './temp_lastround/cartesian_Dom/checkpoint.hdf5'
+    carte_model_checkpoint = ModelCheckpoint(carte_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+
+    force_restart_cumulative_count = 0
+    force_restart_count = 0
+    previou_min_loss = math.inf
+    keepGoing = True
+    while(keepGoing):
+            test_run = carte_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
+            force_restart_cumulative_count += EPOCHS
+            current_min = min(test_run.history['loss'])
+            if current_min <= previou_min_loss:
+                previou_min_loss = current_min
+                force_restart_count = 0                
+            else:
+                if previou_min_loss < 0.3: 
+                    keepGoing = False
+                else:
+                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                        force_restart_count = 0
+                        force_restart_cumulative_count = 0
+                        previou_min_loss = math.inf
+                        os.remove(carte_model_checkpoint_file)
+                        carte_model_checkpoint = ModelCheckpoint(carte_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                        carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
+                    else:
+                        force_restart_count += 1
+                        carte_model.load_weights(carte_model_checkpoint_file)
+    
     carte_test_gene = testGenerator('./data/endoscopic_test956/cartesian', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
     carte_results = carte_model.predict_generator(carte_test_gene, 956, verbose=1)
     np.save('./results/carte_prediction.npy',carte_results)
