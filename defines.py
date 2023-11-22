@@ -34,3 +34,13 @@ CUMULATIVE_STOP_TOLERANCE = 50
 TARGET_HEIGHT = 256
 TARGET_WIDTH = 256
 CHANNEL_NUM = 3
+
+POLAR_GEN_ARGS = dict(horizontal_flip = True,
+                vertical_flip = True,
+                fill_mode = 'nearest',
+                rescale = 1./255)
+CARTE_GEN_ARGS = dict(rotation_range = 360,      # TODO: improve the data augmentation
+                horizontal_flip = True,
+                vertical_flip = True,
+                fill_mode = 'nearest',
+                rescale = 1./255)

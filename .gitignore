@@ -11,3 +11,4 @@ temp_lastround/
 **/big_carte_prediction.*
 *.zip
 history_results/results20231116/polar_prediction.npy
+imageGen/

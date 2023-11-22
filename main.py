@@ -252,63 +252,6 @@ def test_allinc(filematrix, queue):
                 scorematrix[int(test_image_name_raw), current_folder_index] = dice   
     queue.put(scorematrix)
 
-'''def train_and_test_last_round(migrating_wizard):
-    split = migrating_wizard.get_loc_current()
-    
-    true_indices = np.where(split)[0]
-    false_indices = np.where(~split)[0]
-    if os.path.exists('./temp_lastround'):
-        shutil.rmtree('./temp_lastround')
-    os.makedirs('./temp_lastround/cartesian_Dom/image')
-    os.makedirs('./temp_lastround/cartesian_Dom/label')
-    os.makedirs('./temp_lastround/polar_Dom/image')
-    os.makedirs('./temp_lastround/polar_Dom/label')
-    
-    i = 0
-    for item in true_indices:
-        img_name = str(item) + '.tif'
-        src = os.path.join(PARAM_PATH_POLAR, PARAM_IMG_FOLDER, img_name)
-        shutil.copy2(src, os.path.join('./temp_lastround/polar_Dom/image'))
-        src = os.path.join(PARAM_PATH_POLAR, PARAM_MSK_FOLDER, img_name)
-        shutil.copy2(src, os.path.join('./temp_lastround/polar_Dom/label'))
-    for item in false_indices:
-        img_name = str(item) + '.tif'
-        src = os.path.join(PARAM_PATH_CARTE, PARAM_IMG_FOLDER, img_name)
-        shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/image'))
-        src = os.path.join(PARAM_PATH_CARTE, PARAM_MSK_FOLDER, img_name)
-        shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/label'))
-    polar_data_gen_args = dict(rotation_range = 50,      # TODO: improve the data augmentation
-                width_shift_range =0.2,
-                height_shift_range =0.2,
-                shear_range = 0.35,
-                zoom_range = 0.05,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
-    polar_train_gene = trainGenerator(batch_size, './temp_lastround/polar_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, polar_data_gen_args)
-    polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
-    polar_model_checkpoint = ModelCheckpoint('./temp_lastround/polar_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
-    polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
-    polar_test_gene = testGenerator('./data/endoscopic_test956/polar', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
-    polar_results = polar_model.predict_generator(polar_test_gene, 956, verbose=1)
-    np.save('./results/polar_prediction.npy',polar_results)
-
-    carte_data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
-                width_shift_range =0.02,
-                height_shift_range =0.02,
-                shear_range = 0.35,
-                zoom_range = 0.075,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
-    carte_train_gene = trainGenerator(batch_size, './temp_lastround/cartesian_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, carte_data_gen_args)
-    carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
-    carte_model_checkpoint = ModelCheckpoint('./temp_lastround/cartesian_Dom/checkpoint.hdf5', monitor = 'loss', verbose=1, save_best_only=True)
-    carte_model.fit(carte_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
-    carte_test_gene = testGenerator('./data/endoscopic_test956/cartesian', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
-    carte_results = carte_model.predict_generator(carte_test_gene, 956, verbose=1)
-    np.save('./results/carte_prediction.npy',carte_results)'''
-
 def train_and_test_last_round(migrating_wizard):
     split = migrating_wizard.get_loc_current()
     
@@ -334,14 +277,7 @@ def train_and_test_last_round(migrating_wizard):
         shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/image'))
         src = os.path.join(PARAM_PATH_CARTE, PARAM_MSK_FOLDER, img_name)
         shutil.copy2(src, os.path.join('./temp_lastround/cartesian_Dom/label'))
-    polar_data_gen_args = dict(rotation_range = 50,      # TODO: improve the data augmentation
-                width_shift_range =0.2,
-                height_shift_range =0.2,
-                shear_range = 0.35,
-                zoom_range = 0.05,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
+    polar_data_gen_args = POLAR_GEN_ARGS
     polar_train_gene = trainGenerator(batch_size, './temp_lastround/polar_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, polar_data_gen_args)
     polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
     polar_model_checkpoint_file = './temp_lastround/polar_Dom/checkpoint.hdf5'
@@ -352,26 +288,26 @@ def train_and_test_last_round(migrating_wizard):
     previou_min_loss = math.inf
     keepGoing = True
     while(keepGoing):
-            test_run = polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
-            force_restart_cumulative_count += EPOCHS
-            current_min = min(test_run.history['loss'])
-            if current_min <= previou_min_loss:
-                previou_min_loss = current_min
-                force_restart_count = 0                
+        test_run = polar_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [polar_model_checkpoint])
+        force_restart_cumulative_count += EPOCHS
+        current_min = min(test_run.history['loss'])
+        if current_min <= previou_min_loss:
+            previou_min_loss = current_min
+            force_restart_count = 0                
+        else:
+            if previou_min_loss < 0.3: 
+                keepGoing = False
             else:
-                if previou_min_loss < 0.3: 
-                    keepGoing = False
+                if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                    force_restart_count = 0
+                    force_restart_cumulative_count = 0
+                    previou_min_loss = math.inf
+                    os.remove(polar_model_checkpoint_file)
+                    polar_model_checkpoint = ModelCheckpoint(polar_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                    polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
                 else:
-                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
-                        force_restart_count = 0
-                        force_restart_cumulative_count = 0
-                        previou_min_loss = math.inf
-                        os.remove(polar_model_checkpoint_file)
-                        polar_model_checkpoint = ModelCheckpoint(polar_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
-                        polar_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
-                    else:
-                        force_restart_count += 1
-                        polar_model.load_weights(polar_model_checkpoint_file)
+                    force_restart_count += 1
+                    polar_model.load_weights(polar_model_checkpoint_file)
 
     polar_test_gene = testGenerator('./data/endoscopic_test956/polar', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
     polar_results = polar_model.predict_generator(polar_test_gene, 956, verbose=1)
@@ -380,14 +316,7 @@ def train_and_test_last_round(migrating_wizard):
     
 
 
-    carte_data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
-                width_shift_range =0.02,
-                height_shift_range =0.02,
-                shear_range = 0.35,
-                zoom_range = 0.075,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
+    carte_data_gen_args = CARTE_GEN_ARGS
     carte_train_gene = trainGenerator(batch_size, './temp_lastround/cartesian_Dom', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, carte_data_gen_args)
     carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
     carte_model_checkpoint_file = './temp_lastround/cartesian_Dom/checkpoint.hdf5'
@@ -398,26 +327,26 @@ def train_and_test_last_round(migrating_wizard):
     previou_min_loss = math.inf
     keepGoing = True
     while(keepGoing):
-            test_run = carte_model.fit(polar_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
-            force_restart_cumulative_count += EPOCHS
-            current_min = min(test_run.history['loss'])
-            if current_min <= previou_min_loss:
-                previou_min_loss = current_min
-                force_restart_count = 0                
+        test_run = carte_model.fit(carte_train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [carte_model_checkpoint])
+        force_restart_cumulative_count += EPOCHS
+        current_min = min(test_run.history['loss'])
+        if current_min <= previou_min_loss:
+            previou_min_loss = current_min
+            force_restart_count = 0                
+        else:
+            if previou_min_loss < 0.3: 
+                keepGoing = False
             else:
-                if previou_min_loss < 0.3: 
-                    keepGoing = False
+                if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                    force_restart_count = 0
+                    force_restart_cumulative_count = 0
+                    previou_min_loss = math.inf
+                    os.remove(carte_model_checkpoint_file)
+                    carte_model_checkpoint = ModelCheckpoint(carte_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                    carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
                 else:
-                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
-                        force_restart_count = 0
-                        force_restart_cumulative_count = 0
-                        previou_min_loss = math.inf
-                        os.remove(carte_model_checkpoint_file)
-                        carte_model_checkpoint = ModelCheckpoint(carte_model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
-                        carte_model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
-                    else:
-                        force_restart_count += 1
-                        carte_model.load_weights(carte_model_checkpoint_file)
+                    force_restart_count += 1
+                    carte_model.load_weights(carte_model_checkpoint_file)
     
     carte_test_gene = testGenerator('./data/endoscopic_test956/cartesian', PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
     carte_results = carte_model.predict_generator(carte_test_gene, 956, verbose=1)
@@ -425,27 +354,13 @@ def train_and_test_last_round(migrating_wizard):
 
 def train_2K_models(round):        
     queue = multiprocessing.Queue()
-    data_gen_args = dict(rotation_range = 50,      # TODO: improve the data augmentation
-                width_shift_range =0.2,
-                height_shift_range =0.2,
-                shear_range = 0.35,
-                zoom_range = 0.05,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
+    data_gen_args = POLAR_GEN_ARGS
     PP = multiprocessing.Process(target=train, args= ([PARAM_PATH_TEMP_POLAR, data_gen_args, queue]))
     PP.start()
     polar_history = queue.get()
     PP.join()
     
-    data_gen_args = dict(rotation_range = 80,      # TODO: improve the data augmentation
-                width_shift_range =0.02,
-                height_shift_range =0.02,
-                shear_range = 0.35,
-                zoom_range = 0.075,
-                horizontal_flip = True,
-                fill_mode = 'nearest',
-                rescale = 1./255)
+    data_gen_args = CARTE_GEN_ARGS
     PC = multiprocessing.Process(target=train, args= ([PARAM_PATH_TEMP_CARTE, data_gen_args, queue]))
     PC.start()
     carte_history = queue.get()
@@ -624,7 +539,7 @@ if __name__ == '__main__':
             np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)
             img_score_polar = np.load(np_file_polar)
             img_score_carte = np.load(np_file_carte)
-            migrating_wizard = migrator(img_score_polar,img_score_carte, K, ifFlip = True)
+            migrating_wizard = migrator(img_score_polar,img_score_carte, K, ifFlip = False)
             first_split = migrating_wizard.get_loc_current()
             true_indices = np.where(first_split)[0]
             false_indices = np.where(~first_split)[0]
