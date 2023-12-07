@@ -1,5 +1,6 @@
 data/
 dataComplete/
+dataPicked/
 __pycache__/
 .ipynb_checkpoints/
 *.hdf5
@@ -13,3 +14,4 @@ temp_lastround/
 *.zip
 history_results/results20231116/polar_prediction.npy
 imageGen/
+data_original/

@@ -71,7 +71,7 @@ def train(working_parent_folder,data_gen_args, queue):
                 history.append(test_run)
                 force_restart_count = 0                
             else:
-                if previou_min_loss < 0.3: 
+                if previou_min_loss < TRAIN_STOP_THRESHOLD: 
                     keepGoing = False
                 else:
                     if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
@@ -295,7 +295,7 @@ def train_and_test_last_round(migrating_wizard):
             previou_min_loss = current_min
             force_restart_count = 0                
         else:
-            if previou_min_loss < 0.3: 
+            if previou_min_loss < TRAIN_STOP_THRESHOLD: 
                 keepGoing = False
             else:
                 if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
@@ -334,7 +334,7 @@ def train_and_test_last_round(migrating_wizard):
             previou_min_loss = current_min
             force_restart_count = 0                
         else:
-            if previou_min_loss < 0.3: 
+            if previou_min_loss < TRAIN_STOP_THRESHOLD: 
                 keepGoing = False
             else:
                 if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
@@ -469,7 +469,7 @@ def make_K_folds(polar_indices,carte_indices,K):
     checkNcreateTempFolder(PARAM_PATH_TEMP_POLAR, K)
     checkNcreateTempFolder(PARAM_PATH_TEMP_CARTE, K)
 
-    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    kfold = KFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
 
     i = 0
     for train_indices, test_indices_P in kfold.split(polar_indices):
@@ -533,17 +533,21 @@ if __name__ == '__main__':
         print('Now is round', round)
         if is_first_round:
             is_first_round = False
-            score_file_polar = 'analysis_dice_back_Train_P2C.npy'
+            '''score_file_polar = 'analysis_dice_back_Train_P2C.npy'
             score_file_carte = 'analysis_dice_back_Train_C.npy'
             np_file_polar = os.path.join(PARAM_PATH_SCORES, score_file_polar)
             np_file_carte = os.path.join(PARAM_PATH_SCORES, score_file_carte)
             img_score_polar = np.load(np_file_polar)
             img_score_carte = np.load(np_file_carte)
             migrating_wizard = migrator(img_score_polar,img_score_carte, K, ifFlip = False)
+            '''
+            one_folder = os.path.join(PARAM_PATH_CARTE,PARAM_IMG_FOLDER)
+            file_list = os.listdir(one_folder)
+            n = len(file_list)
+            migrating_wizard = migrator(n, K)
             first_split = migrating_wizard.get_loc_current()
             true_indices = np.where(first_split)[0]
             false_indices = np.where(~first_split)[0]
-
             file_matrix = make_K_folds(true_indices,false_indices,K)
             
             

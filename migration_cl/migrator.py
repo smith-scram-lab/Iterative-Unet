@@ -107,8 +107,14 @@ class migrator:
         print('The number of moving: polar -> cartesian: ', count_moveto_carte)
         print('The number of moving: cartesian -> polar: ', count_moveto_polar)
         return moving_count
-
-    def __init__(self, prev_p, prev_c, K, Trans_threshold = 0.3, ifFlip = False):
+    #The following constructor is used for randomized first round location
+    def __init__(self, n, K, Trans_threshold = 0.3):
+        self.K = K
+        self.n = n
+        self.Trans_threshold = Trans_threshold
+        self.history = np.reshape(np.random.choice([False, True], size=n),[n,1])
+    #The following constructor is used for migrator instantiation with previous scores
+    '''def __init__(self, prev_p, prev_c, K, Trans_threshold = 0.3, ifFlip = False):
         self.K = K
         polar_minus_c_dif = prev_p - prev_c
         self.n = polar_minus_c_dif.shape[0]
@@ -123,7 +129,7 @@ class migrator:
                 self.history[i] = False
             i += 1
         if ifFlip:
-            self.history = ~self.history
+            self.history = ~self.history'''
 
 
 
