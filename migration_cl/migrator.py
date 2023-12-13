@@ -107,6 +107,38 @@ class migrator:
         print('The number of moving: polar -> cartesian: ', count_moveto_carte)
         print('The number of moving: cartesian -> polar: ', count_moveto_polar)
         return moving_count
+
+    def decide_move_all(self, diff, decision):
+        current_loc = self.get_loc_current()
+
+        num_polarToCarte = np.count_nonzero(decision == 1)
+        num_carteToPolar = np.count_nonzero(decision == -1)
+
+        sorted_diff = sorted(range(len(diff)), key=lambda index: diff[index])
+        polarToCarte = sorted_diff[:num_polarToCarte]
+        carteToPolar = sorted_diff[-num_carteToPolar:]
+
+        moving_count = [num_polarToCarte, num_carteToPolar]
+        new_Location = current_loc.copy()
+
+        count_moveto_polar = 0
+        count_moveto_carte = 0
+        for index in polarToCarte:
+            new_Location[index] = False
+            count_moveto_polar+=1
+        for index in carteToPolar:
+            new_Location[index] = True
+            count_moveto_carte+=1
+
+        new_Location = new_Location.reshape(-1,1)
+        self.history = np.append(self.history, new_Location, axis = 1)
+        print(self.history.shape)
+        print('round of migration completed')
+        print('Report\nNumber moved:', count_moveto_polar+count_moveto_carte, 'in total')
+        print('The number of moving: polar -> cartesian: ', count_moveto_carte)
+        print('The number of moving: cartesian -> polar: ', count_moveto_polar)
+        return moving_count
+
     #The following constructor is used for randomized first round location
     def __init__(self, n, K, Trans_threshold = 0.3):
         self.K = K
