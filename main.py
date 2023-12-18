@@ -581,7 +581,8 @@ if __name__ == '__main__':
 
         #starting here is cl method
         dif, decision = migrating_wizard.get_decision(K, scorematrix)
-        count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
+        #count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
+        count_p2c_c2p = migrating_wizard.decide_move_all(dif, decision) #This is using the moving all strategy
         mov_count_his.append(count_p2c_c2p)
         #End of cl method
         
