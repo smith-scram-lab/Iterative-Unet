@@ -3,6 +3,8 @@ import os
 from data import *
 from model import *
 from defines import *
+import math
+
 
 K = 5
 batch_size = 5
@@ -25,9 +27,8 @@ for i in range(2):
 	model_checkpoint_file = './big_model.hdf5'
 	model_checkpoint = ModelCheckpoint(model_checkpoint_file,monitor = 'loss', verbose = 1, save_best_only=True)
 	force_restart_cumulative_count = 0
-    force_restart_count = 0
+	force_restart_count = 0
     previou_min_loss = math.inf
-    keepGoing = True
 	keepGoing = True
 	while(keepGoing):
 	            test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
