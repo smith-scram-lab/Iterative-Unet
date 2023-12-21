@@ -36,7 +36,6 @@ for i in range(2):
         current_min = min(test_run.history['loss'])
         if current_min <= previou_min_loss:
             previou_min_loss = current_min
-            history.append(test_run)
             force_restart_count = 0                
         else:
             if previou_min_loss < TRAIN_STOP_THRESHOLD: 
