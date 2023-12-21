@@ -54,6 +54,6 @@ for i in range(2):
                     model.load_weights(model_checkpoint_file)
 
 
-	test_gene = testGenerator(test_folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
-	test_ressults = model.predict_generator(test_gene, 956, verbose=1)
-	np.save(result_files[i], big_carte_results)
+    test_gene = testGenerator(test_folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
+    test_ressults = model.predict_generator(test_gene, 956, verbose=1)
+    np.save(result_files[i], big_carte_results)
