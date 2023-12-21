@@ -29,29 +29,29 @@ for i in range(2):
 	force_restart_cumulative_count = 0
 	force_restart_count = 0
 	previou_min_loss = math.inf
-    keepGoing = True
+	keepGoing = True
 	while(keepGoing):
-	            test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
-	            force_restart_cumulative_count += EPOCHS
-	            current_min = min(test_run.history['loss'])
-	            if current_min <= previou_min_loss:
-	                previou_min_loss = current_min
-	                history.append(test_run)
-	                force_restart_count = 0                
-	            else:
-	                if previou_min_loss < TRAIN_STOP_THRESHOLD: 
-	                    keepGoing = False
-	                else:
-	                    if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
-	                        force_restart_count = 0
-	                        force_restart_cumulative_count = 0
-	                        previou_min_loss = math.inf
-	                        os.remove(model_checkpoint_file)
-	                        model_checkpoint = ModelCheckpoint(model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
-	                        model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
-	                    else:
-	                        force_restart_count += 1
-	                        model.load_weights(model_checkpoint_file)
+        test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
+        force_restart_cumulative_count += EPOCHS
+        current_min = min(test_run.history['loss'])
+        if current_min <= previou_min_loss:
+            previou_min_loss = current_min
+            history.append(test_run)
+            force_restart_count = 0                
+        else:
+            if previou_min_loss < TRAIN_STOP_THRESHOLD: 
+                keepGoing = False
+            else:
+                if force_restart_count >= FORCE_RESTART_TOLERANCE and force_restart_cumulative_count >= CUMULATIVE_STOP_TOLERANCE:
+                    force_restart_count = 0
+                    force_restart_cumulative_count = 0
+                    previou_min_loss = math.inf
+                    os.remove(model_checkpoint_file)
+                    model_checkpoint = ModelCheckpoint(model_checkpoint_file, monitor = 'loss', verbose=1, save_best_only=True)
+                    model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM]) 
+                else:
+                    force_restart_count += 1
+                    model.load_weights(model_checkpoint_file)
 
 
 	test_gene = testGenerator(test_folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
