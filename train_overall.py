@@ -20,13 +20,13 @@ test_folders = [cartesian_test_folder,polar_test_folder]
 result_files = [cartesian_result_file, polar_result_file]
 
 for i in range(2):
-	bt_generator = trainGenerator(batch_size, folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, gen_args[i])
+	train_gene = trainGenerator(batch_size, folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER, gen_args[i])
 	model = unet(PARAM_BETA1[PARAM_BETA_TEST_NUM], PARAM_BETA2[PARAM_BETA_TEST_NUM])
 	model_checkpoint_file = './big_model.hdf5'
 	model_checkpoint = ModelCheckpoint(model_checkpoint_file,monitor = 'loss', verbose = 1, save_best_only=True)
 	keepGoing = True
 	while(keepGoing):
-	            test_run = model.fit(test_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
+	            test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
 	            force_restart_cumulative_count += EPOCHS
 	            current_min = min(test_run.history['loss'])
 	            if current_min <= previou_min_loss:
