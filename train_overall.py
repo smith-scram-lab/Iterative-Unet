@@ -28,8 +28,8 @@ for i in range(2):
 	model_checkpoint = ModelCheckpoint(model_checkpoint_file,monitor = 'loss', verbose = 1, save_best_only=True)
 	force_restart_cumulative_count = 0
 	force_restart_count = 0
-    previou_min_loss = math.inf
-	keepGoing = True
+	previou_min_loss = math.inf
+    keepGoing = True
 	while(keepGoing):
 	            test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
 	            force_restart_cumulative_count += EPOCHS
