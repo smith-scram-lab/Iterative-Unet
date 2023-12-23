@@ -29,7 +29,7 @@ for i in range(2):
     force_restart_cumulative_count = 0
     force_restart_count = 0
     previou_min_loss = math.inf
-    keepGoing = False
+    keepGoing = True
     while(keepGoing):
         test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
         force_restart_cumulative_count += EPOCHS
