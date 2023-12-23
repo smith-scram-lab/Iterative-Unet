@@ -29,7 +29,7 @@ for i in range(2):
     force_restart_cumulative_count = 0
     force_restart_count = 0
     previou_min_loss = math.inf
-    keepGoing = True
+    keepGoing = False
     while(keepGoing):
         test_run = model.fit(train_gene, verbose = 1, steps_per_epoch = STEPS, epochs = EPOCHS, callbacks = [model_checkpoint])
         force_restart_cumulative_count += EPOCHS
@@ -54,5 +54,5 @@ for i in range(2):
 
 
     test_gene = testGenerator(test_folders[i], PARAM_IMG_FOLDER, PARAM_MSK_FOLDER)
-    test_ressults = model.predict_generator(test_gene, 956, verbose=1)
-    np.save(result_files[i], big_carte_results)
+    test_results = model.predict_generator(test_gene, 956, verbose=1)
+    np.save(result_files[i], test_results)
