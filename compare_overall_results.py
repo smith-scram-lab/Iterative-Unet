@@ -2,6 +2,37 @@ import numpy as np
 import os
 import cv2
 from p2ctransformer.p2c import *
+
+def dice_coefficient_carte(image1, image2):#Generate the Dice coefficient of two binary images, should do thresholding before inputting
+    # Ensure the input images have the same shape
+    smooth = 1
+    if image1.shape != image2.shape:
+        raise ValueError("Input images must have the same shape.")
+    image1 = np.matrix(image1)
+    image2 = np.matrix(image2)
+    img1_f = (~image1.astype(bool)).astype(int)
+    img2_f = (~image2.astype(bool)).astype(int)
+    # Calculate the intersection (logical AND) between the two binary images
+    intersection_o = np.logical_and(image1, image2).sum()
+    intersection_f = np.logical_and(img1_f, img2_f).sum()
+    #print(intersection_o,intersection_f)
+    # Calculate the sum of pixels in each image
+    sum_image1_o = image1.sum()
+    sum_image2_o = image2.sum()
+    #print(sum_image1_o,sum_image2_o)
+    sum_image1_f = img1_f.sum()
+    sum_image2_f = img2_f.sum()
+    #print(sum_image1_f,sum_image2_f)
+   
+    # Calculate the Dice coefficient
+    dice = (2.0 * intersection_o + smooth) / (sum_image1_o + sum_image2_o + smooth)
+    #print('dice',dice)
+    dice_f = (2.0 * (intersection_f - 14616) + smooth) / (sum_image1_f + sum_image2_f + smooth - 29232) #Hard-coded numbers here, need to prove 
+    #print('dice_f',dice_f)
+    dice_avg = (dice + dice_f) / 2.0
+    #print('dice_avg', dice_avg)
+    return dice_avg
+
 polar_prediction_file = 'big_polar_prediction.npy'
 carte_prediction_file = 'big_carte_prediction.npy'
 polar_prediction = np.load(polar_prediction_file)
