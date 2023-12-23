@@ -10,6 +10,7 @@ test_label_folder_path = 'data/endoscopic_test956/cartesian/label'
 count = 0
 big_polar_dice = []
 big_carte_dice = []
+trans_dic = p2c_dic_gen(127, 127, 256, 256)
 for prediction in [polar_prediction,carte_prediction]:
     for i in range(956):
         test_file_name = os.path.join(test_label_folder_path, (str(i) + '.tif'))
