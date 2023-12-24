@@ -59,7 +59,6 @@ for j in range(4):
         threshold = 0.5
         current_prediction = (current_prediction > threshold).astype(np.uint8)
         if count%2 == 0:
-            print('polar', count)
             current_prediction = p2c(current_prediction, trans_dic)
         overall_dice.append(dice_coefficient_carte(ground_truth_mask,current_prediction))   
         overall_dice_np = np.asarray(overall_dice)   
