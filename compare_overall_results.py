@@ -61,6 +61,6 @@ for j in range(4):
         if count%2 == 0:
             current_prediction = p2c(current_prediction, trans_dic)
         overall_dice.append(dice_coefficient_carte(ground_truth_mask,current_prediction))   
-        overall_dice_np = np.asarray(overall_dice)   
+    overall_dice_np = np.asarray(overall_dice)   
     np.save(file_name[j], overall_dice_np)
     count += 1
