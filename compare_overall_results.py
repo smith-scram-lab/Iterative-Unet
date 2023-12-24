@@ -44,11 +44,12 @@ carte_prediction_new = np.load(carte_prediction_new_file)
 test_label_folder_path = 'data/endoscopic_test956/cartesian/label'
 file_name = ['polar_overall.npy','carte_overall.npy','polar_new_pre.npy','carte_new_pre.npy']
 count = 0
-overall_dice = []
+
 trans_dic = p2c_dic_gen(127, 127, 256, 256)
 predictions = [polar_prediction, carte_prediction, polar_prediction_new, carte_prediction_new]
 for j in range(4):
     prediction = predictions[j]
+    overall_dice = []
     for i in range(956):
         test_file_name = os.path.join(test_label_folder_path, (str(i) + '.tif'))
         ground_truth_mask = cv2.imread(test_file_name, cv2.IMREAD_GRAYSCALE)
