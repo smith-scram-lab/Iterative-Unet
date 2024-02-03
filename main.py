@@ -575,8 +575,8 @@ if __name__ == '__main__':
         np.save(scorematrix_path, scorematrix)
 
         #this is yz method
-        '''migrating_wizard.decide_and_mod_prob(scorematrix)
-        migrating_wizard.migrate()'''
+        #migrating_wizard.decide_and_mod_prob(scorematrix)
+        #migrating_wizard.migrate()
         #End of yz method
 
         #starting here is cl method
@@ -594,20 +594,16 @@ if __name__ == '__main__':
         history_name = 'history/history_round_' + str(round) + '.npy'
         history_path = os.path.join(PARAM_RESULTS,history_name)
         np.save(history_path, history)
-    print(mov_count_his)
-    train_and_test_last_round(migrating_wizard)
-    print(mov_count_his)
-    train_and_test_last_round(migrating_wizard)
         #uncomment if yz method
-    '''prob_history = migrating_wizard.get_prob_history() 
-    prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
-    prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
-    np.save(prob_history_path, prob_history)'''
-    '''prob_history = migrating_wizard.get_prob_history() 
-    prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
-    prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
-    np.save(prob_history_path, prob_history)'''
+        #prob_history = migrating_wizard.get_prob_history() 
+        #prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
+        #prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
+        #np.save(prob_history_path, prob_history)
+    print(mov_count_his)
+    train_and_test_last_round(migrating_wizard)
         
+    
+ 
 
 
           

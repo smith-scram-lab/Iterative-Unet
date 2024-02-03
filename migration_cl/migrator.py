@@ -13,21 +13,23 @@ class migrator:
         decision = np.zeros([self.n,1])
         diff = np.zeros([self.n,1])
         #This following is for comparing in-group to maximum of the other group
-        '''for i in range(self.n):
-            max_score = np.max(scorematrix[i])
-            max_arg = np.argmax(scorematrix[i])
-            if current_loc[i]: #if it is polar dominant
-                #print('p d')
-                if max_arg >= self.K: #need to move to cartesian
-                    #print('need to move to cartesian')
-                    decision[i] = 1
-                    diff[i] = np.max(scorematrix[i][0:self.K]) - np.max(scorematrix[i]) #negative
-            else: #if it is cartesian dominant
-                #print('c d')
-                if max_arg < self.K: #need to move to polar
-                    #print('need to move to polar')
-                    decision[i] = -1
-                    diff[i] = np.max(scorematrix[i]) - np.max(scorematrix[i][self.K:]) #positive'''
+        for i in range(self.n):
+            if current_loc[i]:
+                polar_score = np.max(scorematrix[i][0:self.K])
+                carte_score = np.max(scorematrix[i][self.K:])
+                if carte_score > polar_score:
+                    dif = polar_score - carte_score
+                    if abs(dif) >= self.Trans_threshold:
+                        decision[i] = 1
+                        diff[i] = polar_score - carte_score
+            else:
+                polar_score = np.max(scorematrix[i][0:self.K])
+                carte_score = np.max(scorematrix[i][self.K:])
+                if carte_score < polar_score:
+                    dif = polar_score - carte_score
+                    if abs(dif) >= self.Trans_threshold:
+                        decision[i] = -1
+                        diff[i] = polar_score - carte_score
         #This following is for comparing in-group to median of the other group        
         '''for i in range(self.n):
             if current_loc[i]:
@@ -48,7 +50,7 @@ class migrator:
                         diff[i] = polar_score - carte_score'''
         #-------------------------------------------------------
         #This following is for comparing in-group to mean of the other group
-        for i in range(self.n):
+        '''for i in range(self.n):
             if current_loc[i]:
                 polar_score = np.max(scorematrix[i][0:self.K])
                 carte_score = np.mean(scorematrix[i][self.K:])
@@ -64,7 +66,7 @@ class migrator:
                     dif = polar_score - carte_score
                     if abs(dif) >= self.Trans_threshold:
                         decision[i] = -1
-                        diff[i] = polar_score - carte_score
+                        diff[i] = polar_score - carte_score'''
         #-------------------------------------------------------
         print(decision)
         number_of_ones_decision = np.count_nonzero(decision == 1)
@@ -144,7 +146,9 @@ class migrator:
         self.K = K
         self.n = n
         self.Trans_threshold = Trans_threshold
-        self.history = np.reshape(np.random.choice([False, True], size=n),[n,1])
+        self.history = np.concatenate([np.repeat(True, n//2), np.repeat(False, n//2)])
+        np.random.shuffle(self.history)
+        self.history = np.reshape(self.history, [n,1])
     #The following constructor is used for migrator instantiation with previous scores
     '''def __init__(self, prev_p, prev_c, K, Trans_threshold = 0.3, ifFlip = False):
         self.K = K

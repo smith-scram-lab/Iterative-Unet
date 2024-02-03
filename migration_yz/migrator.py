@@ -60,12 +60,15 @@ class migrator:
         print('Report\n Number moved:', number_of_move)
 
 
-    def __init__(self, prev_p, prev_c, K):
+    '''def __init__(self, prev_p, prev_c, K):
         self.K = K
         polar_minus_c_dif = prev_p - prev_c
         self.n = polar_minus_c_dif.shape[0]
-        self.history = np.zeros([self.n,1], dtype = np.bool)
+        
         self.probablity = np.ones([self.n,1],dtype = np.float) * 0.5
+        
+        
+        self.history = np.zeros([self.n,1], dtype = np.bool)
         threshold = np.median(polar_minus_c_dif)#take the median for even split
         i = 0
         for item in polar_minus_c_dif:#now the decision is based on the positivity of difference, which is based on the fact that about half and half split
@@ -73,9 +76,17 @@ class migrator:
                 self.history[i] = True #True is for Polar
             else:
                 self.history[i] = False
-            i += 1
-            
-                
+            i += 1'''
+    def __init__(self, n, K):
+        self.K = K
+        self.n = n
+        self.probablity = np.ones([self.n,1],dtype = np.float) * 0.5
+        #self.history = np.reshape(np.random.choice([False, True], size=n),[n,1])
+        # if fixed size 3702-3702 -> 
+        self.history = np.concatenate([np.repeat(True, n//2), np.repeat(False, n//2)])
+        np.random.shuffle(self.history)
+        self.history = np.reshape(self.history, [n,1])
+
         
     def __str__(self):
         count = 0
