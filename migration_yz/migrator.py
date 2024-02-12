@@ -17,7 +17,23 @@ class migrator:
         current_loc = self.get_loc_current()
         self.probablity = np.append(self.probablity,np.zeros([self.n,1]),1)
         for i in range(self.n):
-            max_score = np.max(scorematrix[i])
+            if current_loc[i]:
+                polar_score = np.max(scorematrix[i][0:self.K])
+                carte_score = np.mean(scorematrix[i][self.K:])
+                dif = carte_score - polar_score
+                if dif > 0: 
+                    self.mod_prob(i,True, dif)
+                else:
+                    self.mod_prob(i,False, dif)
+            else:
+                polar_score = np.mean(scorematrix[i][0:self.K])
+                carte_score = np.max(scorematrix[i][self.K:])
+                dif = polar_score - carte_score
+                if dif > 0:
+                    self.mod_prob(i,True, dif)
+                else:
+                    self.mod_prob(i,False, dif)
+            '''max_score = np.max(scorematrix[i])
             max_arg = np.argmax(scorematrix[i])
             if current_loc[i]:#if it is polar dominant
                 avg_carte = np.average(scorematrix[i][self.K:])
@@ -32,16 +48,13 @@ class migrator:
                     dif = avg_polar - np.max(scorematrix[i][self.K:])
                     self.mod_prob(i, True, dif)
                 else:
-                    self.mod_prob(i, False, max_score - avg_polar)
+                    self.mod_prob(i, False, max_score - avg_polar)'''
                     
 
     def mod_prob(self, index, shouldMove, acce):
-        if shouldMove:
-            self.probablity[index][-1] = self.probablity[index][-2]*(1+acce)
-            if self.probablity[index][-1] > 1:
-                self.probablity[index][-1] = 1
-        else:
-            self.probablity[index][-1] = self.probablity[index][-2]*(1-acce)
+        self.probablity[index][-1] = self.probablity[index][-2]*(1+acce)
+        if shouldMove and self.probablity[index][-1] > 1:
+            self.probablity[index][-1] = 1
 
     def migrate(self):
         array_size = (self.n,)

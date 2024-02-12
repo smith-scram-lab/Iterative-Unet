@@ -2,8 +2,8 @@ from defines import *
 from model import *
 from data import *
 from filePrep import *
-#from migration_yz.migrator import *
-from migration_cl.migrator import *
+from migration_yz.migrator import *
+#from migration_cl.migrator import *
 #from migration_cw.migrator import *
 from model_reader.modelreader import *
 from p2ctransformer.p2c import *
@@ -575,15 +575,15 @@ if __name__ == '__main__':
         np.save(scorematrix_path, scorematrix)
 
         #this is yz method
-        #migrating_wizard.decide_and_mod_prob(scorematrix)
-        #migrating_wizard.migrate()
+        migrating_wizard.decide_and_mod_prob(scorematrix)
+        migrating_wizard.migrate()
         #End of yz method
 
         #starting here is cl method
-        dif, decision = migrating_wizard.get_decision(K, scorematrix)
+        #dif, decision = migrating_wizard.get_decision(K, scorematrix)
         #count_p2c_c2p = migrating_wizard.decide_move(2000, dif, decision)
-        count_p2c_c2p = migrating_wizard.decide_move_all(dif, decision) #This is using the moving all strategy
-        mov_count_his.append(count_p2c_c2p)
+        #count_p2c_c2p = migrating_wizard.decide_move_all(dif, decision) #This is using the moving all strategy
+        #mov_count_his.append(count_p2c_c2p)
         #End of cl method
         
         #Start of cw method
@@ -595,10 +595,10 @@ if __name__ == '__main__':
         history_path = os.path.join(PARAM_RESULTS,history_name)
         np.save(history_path, history)
         #uncomment if yz method
-        #prob_history = migrating_wizard.get_prob_history() 
-        #prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
-        #prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
-        #np.save(prob_history_path, prob_history)
+        prob_history = migrating_wizard.get_prob_history() 
+        prob_history_name = 'prob_history/prob_history_round_' + str(round) + '.npy'
+        prob_history_path = os.path.join(PARAM_RESULTS,prob_history_name)
+        np.save(prob_history_path, prob_history)
     print(mov_count_his)
     train_and_test_last_round(migrating_wizard)
         
