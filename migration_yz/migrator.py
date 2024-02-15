@@ -19,6 +19,22 @@ class migrator:
         for i in range(self.n):
             if current_loc[i]:
                 polar_score = np.max(scorematrix[i][0:self.K])
+                carte_score = np.median(scorematrix[i][self.K:])
+                dif = carte_score - polar_score
+                if dif > 0:
+                    self.mod_prob(i,True, dif)
+                else:
+                    self.mod_prob(i,False, dif)
+            else:
+                polar_score = np.median(scorematrix[i][0:self.K])
+                carte_score = np.max(scorematrix[i][self.K:])
+                dif = polar_score - carte_score
+                if dif > 0:
+                    self.mod_prob(i,True, dif)
+                else:
+                    self.mod_prob(i,False, dif)
+            '''if current_loc[i]:
+                polar_score = np.max(scorematrix[i][0:self.K])
                 carte_score = np.mean(scorematrix[i][self.K:])
                 dif = carte_score - polar_score
                 if dif > 0: 
@@ -32,7 +48,7 @@ class migrator:
                 if dif > 0:
                     self.mod_prob(i,True, dif)
                 else:
-                    self.mod_prob(i,False, dif)
+                    self.mod_prob(i,False, dif)'''
             '''max_score = np.max(scorematrix[i])
             max_arg = np.argmax(scorematrix[i])
             if current_loc[i]:#if it is polar dominant
